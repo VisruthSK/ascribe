@@ -1,4 +1,5 @@
-url: https://visruthsk.github.io/ascribe/
+url: https://ascribe.visruth.com
 template:
   bootstrap: 5
-
+  bootswatch: lumen
+  light-switch: true
