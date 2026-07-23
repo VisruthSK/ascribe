@@ -113,8 +113,9 @@ scan_usage <- function(
 
   # Build skip_pattern once here rather than once per file inside .extract_code
   skip_pkgs <- c(allowed_packages, names(metapackages))
-  skip_pattern <- if (length(skip_pkgs)) {
-    escaped <- gsub("([][{}()+*^$|\\\\.?])", "\\\\\\1", unique(skip_pkgs))
+  u_skip_pkgs <- unique(skip_pkgs)
+  skip_pattern <- if (length(u_skip_pkgs) > 0L && length(u_skip_pkgs) <= 200L) {
+    escaped <- gsub("([][{}()+*^$|\\\\.?])", "\\\\\\1", u_skip_pkgs)
     paste0("\\b(", paste(escaped, collapse = "|"), ")\\b")
   } else {
     NULL
@@ -174,57 +175,26 @@ scan_usage <- function(
   paste0("(^|/)(?:", paste(escaped, collapse = "|"), ")(/|$)")
 }
 
-.scan_dir_walk <- function(path, skip_dirs, file_cb) {
-  entries <- list.files(
-    path,
-    all.files = TRUE,
-    full.names = TRUE,
-    no.. = TRUE
-  )
-  if (!length(entries)) {
-    return(invisible(NULL))
-  }
-
-  is_dir <- dir.exists(entries)
-
-  if (any(is_dir)) {
-    dirs <- entries[is_dir]
-    if (length(skip_dirs)) {
-      keep <- is.na(fastmatch::fmatch(basename(dirs), skip_dirs))
-      dirs <- dirs[keep]
-    }
-    if (length(dirs)) {
-      for (dir in dirs) {
-        .scan_dir_walk(dir, skip_dirs, file_cb)
-      }
-    }
-  }
-
-  if (!all(is_dir)) {
-    file_cb(entries[!is_dir])
-  }
-
-  invisible(NULL)
-}
-
 .scan_dir_files <- function(dir_path, skip_dirs) {
   dir_path <- normalizePath(dir_path, winslash = "/", mustWork = TRUE)
-  chunks <- list()
-  n_chunks <- 0L
-
-  .scan_dir_walk(dir_path, skip_dirs, function(paths) {
-    code_files <- paths[grepl("\\.(R|Rmd|Qmd)$", paths, ignore.case = TRUE)]
-    if (!length(code_files)) {
-      return(invisible(NULL))
-    }
-
-    n_chunks <<- n_chunks + 1L
-    chunks[[n_chunks]] <<- code_files
-
-    invisible(NULL)
-  })
-  files <- if (n_chunks) unlist(chunks, use.names = FALSE) else character()
-  normalizePath(files, winslash = "/", mustWork = FALSE)
+  files <- list.files(
+    dir_path,
+    pattern = "\\.(R|Rmd|Qmd)$",
+    recursive = TRUE,
+    full.names = TRUE,
+    ignore.case = TRUE,
+    all.files = TRUE,
+    no.. = TRUE
+  )
+  if (!length(files)) {
+    return(character())
+  }
+  files <- normalizePath(files, winslash = "/", mustWork = FALSE)
+  if (length(skip_dirs)) {
+    pat <- .scan_skip_regex(skip_dirs)
+    files <- files[!grepl(pat, files, perl = TRUE)]
+  }
+  files
 }
 
 .collect_unique <- function(hits, field) {
@@ -259,8 +229,19 @@ scan_usage <- function(
   }
 
   lines <- readLines(file, warn = FALSE)
+  if (ext == "r") {
+    code_raw <- paste(lines, collapse = "\n")
+    if (
+      !is.null(skip_pattern) &&
+        !grepl(skip_pattern, code_raw, perl = TRUE, useBytes = TRUE)
+    ) {
+      return("")
+    }
+    return(code_raw)
+  }
+
   if (!is.null(skip_pattern)) {
-    if (!any(grepl(skip_pattern, lines, perl = TRUE))) {
+    if (length(grep(skip_pattern, lines, perl = TRUE, useBytes = TRUE)) == 0L) {
       return("")
     }
   }
@@ -840,6 +821,24 @@ scan_usage <- function(
     return(rep.int(allowed_origins[[1L]], length(visit_idx)))
   }
 
+  if (length(meta$provider) == 1L) {
+    provider_rows <- attached_rows[[meta$provider]]
+    hits <- findInterval(visit_idx, attached$visit_idx[provider_rows])
+    matched <- hits > 0L
+    resolved <- rep.int("", length(visit_idx))
+    if (!any(matched)) {
+      return(resolved)
+    }
+    orig <- meta$origin[[1L]]
+    resolved_val <- if (is.na(fastmatch::fmatch(orig, allowed_packages))) {
+      meta$provider[[1L]]
+    } else {
+      orig
+    }
+    resolved[matched] <- resolved_val
+    return(resolved)
+  }
+
   attached_match_idx <- do.call(
     cbind,
     lapply(
@@ -865,13 +864,12 @@ scan_usage <- function(
     return(resolved)
   }
 
-  resolved_provider <- meta$provider[best_provider[keep]]
-  resolved_origin <- meta$origin[best_provider[keep]]
-  resolved[keep] <- ifelse(
-    is.na(fastmatch::fmatch(resolved_origin, allowed_packages)),
-    resolved_provider,
-    resolved_origin
-  )
+  res_orig <- meta$origin[best_provider[keep]]
+  res_prov <- meta$provider[best_provider[keep]]
+  unallowed <- is.na(fastmatch::fmatch(res_orig, allowed_packages))
+  res_val <- res_orig
+  res_val[unallowed] <- res_prov[unallowed]
+  resolved[keep] <- res_val
   resolved
 }
 
