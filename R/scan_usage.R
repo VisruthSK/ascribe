@@ -82,6 +82,20 @@ scan_usage <- function(
   }
   resolver_index <- .scan_resolver_index(export_index, origin_map)
   metapackages <- .normalize_metapackages(metapackages, allowed_packages)
+  export_names <- names(export_index)
+  if (is.null(export_names)) {
+    export_names <- character()
+  }
+  walker <- .make_ast_walker(
+    ignore_unqualified_functions = ignore_unqualified_functions,
+    lib_funs = .scan_lib_funs,
+    allowed_packages = allowed_packages,
+    ns_ops = .scan_ns_ops,
+    use_heads = .scan_use_heads,
+    ignore_heads = .scan_ignore_heads,
+    export_names = export_names,
+    metapackages = metapackages
+  )
 
   paths <- normalizePath(path, winslash = "/", mustWork = TRUE)
   dir_flags <- dir.exists(paths)
@@ -137,6 +151,7 @@ scan_usage <- function(
         origin_map = origin_map,
         resolver_index = resolver_index,
         metapackages = metapackages,
+        walker = walker,
         file_path = file
       )
     }
@@ -376,6 +391,7 @@ scan_usage <- function(
   origin_map = NULL,
   resolver_index = NULL,
   metapackages = NULL,
+  walker = NULL,
   file_path = NULL
 ) {
   empty <- list(pkgs = character(), keys = character(), ambiguous = character())
@@ -433,19 +449,21 @@ scan_usage <- function(
     resolver_index <- .scan_resolver_index(export_index, origin_map)
   }
 
-  walk <- .make_ast_walker(
-    ignore_unqualified_functions = ignore_unqualified_functions,
-    lib_funs = .scan_lib_funs,
-    allowed_packages = allowed_packages,
-    ns_ops = .scan_ns_ops,
-    use_heads = .scan_use_heads,
-    ignore_heads = .scan_ignore_heads,
-    export_names = export_names,
-    metapackages = metapackages
-  )
+  if (is.null(walker)) {
+    walker <- .make_ast_walker(
+      ignore_unqualified_functions = ignore_unqualified_functions,
+      lib_funs = .scan_lib_funs,
+      allowed_packages = allowed_packages,
+      ns_ops = .scan_ns_ops,
+      use_heads = .scan_use_heads,
+      ignore_heads = .scan_ignore_heads,
+      export_names = export_names,
+      metapackages = metapackages
+    )
+  }
 
   for (i in seq_along(expr)) {
-    walk(expr[[i]], acc)
+    walker(expr[[i]], acc)
   }
 
   lib_data <- if (length(acc$lib_pkgs)) {

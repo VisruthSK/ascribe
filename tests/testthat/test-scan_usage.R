@@ -685,6 +685,34 @@ test_that("full coverage tests for all scan_usage.R branches", {
   }
 })
 
+test_that(".scan_tokens accepts a precomputed AST walker", {
+  walker <- .make_ast_walker(
+    ignore_unqualified_functions = character(),
+    lib_funs = .scan_lib_funs,
+    allowed_packages = "stats",
+    ns_ops = .scan_ns_ops,
+    use_heads = .scan_use_heads,
+    ignore_heads = .scan_ignore_heads,
+    export_names = "median",
+    metapackages = NULL
+  )
+
+  hits <- .scan_tokens(
+    "library(stats)\nmedian(1:5)",
+    ignore_unqualified_functions = character(),
+    allowed_packages = "stats",
+    export_index = list(median = "stats"),
+    origin_map = list2env(
+      list("stats::median" = "stats"),
+      parent = emptyenv()
+    ),
+    walker = walker
+  )
+
+  expect_equal(hits$pkgs, c("stats", "stats"))
+  expect_equal(hits$keys, "stats::median")
+})
+
 test_that(".scan_resolver_index handles empty provider list, missing origin map, and unmapped multi-provider functions", {
   idx_empty <- list(foo = character())
   res_empty <- .scan_resolver_index(idx_empty, NULL)
