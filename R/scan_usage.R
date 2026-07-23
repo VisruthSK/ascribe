@@ -383,6 +383,22 @@ scan_usage <- function(
   "[["
 )
 
+.scan_ignore_heads_env <- (function() {
+  e <- new.env(parent = emptyenv(), hash = TRUE)
+  for (x in .scan_ignore_heads) {
+    e[[x]] <- TRUE
+  }
+  e
+})()
+
+.scan_use_heads_env <- (function() {
+  e <- new.env(parent = emptyenv(), hash = TRUE)
+  for (x in .scan_use_heads) {
+    e[[x]] <- TRUE
+  }
+  e
+})()
+
 .scan_tokens <- function(
   code,
   ignore_unqualified_functions,
@@ -511,13 +527,19 @@ scan_usage <- function(
   metapackages
 ) {
   make_env <- function(vec) {
-    e <- new.env(parent = emptyenv(), hash = TRUE)
-    if (length(vec)) {
+    if (!length(vec)) {
+      return(new.env(parent = emptyenv(), hash = TRUE))
+    }
+    if (length(vec) < 100L) {
+      e <- new.env(parent = emptyenv(), hash = TRUE)
       for (x in vec) {
         e[[x]] <- TRUE
       }
+      return(e)
     }
-    e
+    vals <- rep.int(list(TRUE), length(vec))
+    names(vals) <- vec
+    list2env(vals, parent = emptyenv(), hash = TRUE)
   }
 
   ignore_unqual_env <- make_env(ignore_unqualified_functions)
@@ -777,54 +799,54 @@ scan_usage <- function(
   origin_map = NULL
 ) {
   funs <- names(export_index)
-  if (is.null(funs)) {
+  if (is.null(funs) || length(funs) == 0L) {
     return(list())
   }
 
-  has_map <- !is.null(origin_map)
+  lens <- lengths(export_index)
+  n_funs <- length(funs)
+  has_map <- !is.null(origin_map) && length(origin_map) > 0L
+  res <- vector("list", n_funs)
 
-  res <- lapply(
-    seq_along(export_index),
-    \(i) {
-      providers <- export_index[[i]]
-      fun <- funs[[i]]
-      n <- length(providers)
-      if (n == 0L) {
-        return(NULL)
+  # Single provider functions (>95% of cases)
+  single_idx <- which(lens == 1L)
+  if (length(single_idx) > 0L) {
+    s_funs <- funs[single_idx]
+    s_provs <- unlist(export_index[single_idx], use.names = FALSE)
+    if (has_map) {
+      s_keys <- paste0(s_provs, "::", s_funs)
+      for (k in seq_along(single_idx)) {
+        i <- single_idx[[k]]
+        p <- s_provs[[k]]
+        v <- origin_map[[s_keys[[k]]]]
+        orig <- if (is.null(v) || !nzchar(v)) p else v
+        res[[i]] <- list(provider = p, origin = orig)
       }
-
-      if (n == 1L) {
-        orig <- if (has_map) {
-          origin_map[[paste0(providers, "::", fun)]]
-        } else {
-          NULL
-        }
-        if (is.null(orig) || !nzchar(orig)) {
-          orig <- providers
-        }
-        return(list(provider = providers, origin = orig))
+    } else {
+      for (k in seq_along(single_idx)) {
+        i <- single_idx[[k]]
+        p <- s_provs[[k]]
+        res[[i]] <- list(provider = p, origin = p)
       }
-
-      keys <- paste0(providers, "::", fun)
-      origins <- if (has_map) {
-        vapply(
-          keys,
-          \(k) {
-            v <- origin_map[[k]]
-            if (is.null(v)) "" else v
-          },
-          character(1),
-          USE.NAMES = FALSE
-        )
-      } else {
-        character(n)
-      }
-      missing <- !nzchar(origins)
-      origins[missing] <- providers[missing]
-
-      list(provider = providers, origin = origins)
     }
-  )
+  }
+
+  # Multi-provider functions
+  other_idx <- which(lens > 1L)
+  if (length(other_idx) > 0L) {
+    for (i in other_idx) {
+      providers <- export_index[[i]]
+      n <- length(providers)
+      fun <- funs[[i]]
+      origins <- character(n)
+      for (j in seq_len(n)) {
+        p <- providers[[j]]
+        v <- if (has_map) origin_map[[paste0(p, "::", fun)]] else NULL
+        origins[[j]] <- if (is.null(v) || !nzchar(v)) p else v
+      }
+      res[[i]] <- list(provider = providers, origin = origins)
+    }
+  }
 
   names(res) <- funs
   res

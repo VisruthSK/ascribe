@@ -59,6 +59,22 @@ expr_before <- quote({
   if (requireNamespace("knitr", quietly = TRUE)) {
     library(knitr)
   }
+  candidate_pkgs <- c(
+    "ggplot2",
+    "dplyr",
+    "loo",
+    "brms",
+    "posterior",
+    "bayesplot",
+    "rstan",
+    "stats",
+    "utils",
+    "graphics",
+    "grDevices",
+    "methods",
+    "grid",
+    "tools"
+  )
   pkgs <- candidate_pkgs[vapply(
     candidate_pkgs,
     requireNamespace,
