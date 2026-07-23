@@ -8,3 +8,4 @@
 ^jarl\.toml$
 ^data-raw$
 ^AGENTS\.md$
+^cran-comments\.md$

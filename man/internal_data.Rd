@@ -10,6 +10,11 @@ stdlib_funs()
 
 scan_skip_dirs()
 }
+\value{
+A character vector of function names to ignore.
+
+A character vector of directory names to skip.
+}
 \description{
 Vector of functions to be ignored when parsing.
 Generated in \code{data-raw/sysdata.R} from exports of base R packages.

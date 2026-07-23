@@ -10,10 +10,20 @@ test_that("collect_r6_methods returns empty vector when no R6 classes exist", {
   expect_type(res, "character")
 })
 
+test_that("collect_r6_methods finds exported and internal R6 methods", {
+  methods <- collect_r6_methods("testthat", getNamespaceExports("testthat"))
+  expect_true("public_fun" %in% methods)
+  expect_false(anyNA(methods))
+  expect_true(all(nzchar(methods)))
+})
+
 test_that("resolve_origin identifies origin of re-exported functions and non-functions", {
   # Base/stats function origin
   origin <- resolve_origin("stats", "median")
   expect_equal(origin, "stats")
+
+  expect_equal(resolve_origin("testthat", "expect_equal"), "testthat")
+  expect_true(is.na(resolve_origin("base", "sum")))
 
   # Non-function or non-existent returns NA
   expect_true(is.na(resolve_origin("stats", "non_existent_function_12345")))

@@ -8,9 +8,10 @@ Description: Scans R source files for package and function use, then builds
     citations from configurable package universes. Supports .R, .Rmd, and
     .qmd files, resolves unqualified calls by attachment order and re-export
     origin, and leaves each package collection to define its own citations. See
-    stanflow for an example usage.
+    'stanflow' <https://github.com/VisruthSK/stanflow> for an example usage.
 License: MIT + file LICENSE
 URL: https://ascribe.visruth.com
+BugReports: https://github.com/VisruthSK/ascribe/issues
 Depends: 
     R (>= 4.2.0)
 Imports:

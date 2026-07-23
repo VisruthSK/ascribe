@@ -976,6 +976,7 @@ NULL
 #' Generated in `data-raw/sysdata.R` from exports of base R packages.
 #'
 #' @rdname internal_data
+#' @return A character vector of function names to ignore.
 #' @export
 #' @examples
 #' head(stdlib_funs())
@@ -989,6 +990,7 @@ stdlib_funs <- function() {
 #' a project. Generated in `data-raw/sysdata.R`.
 #'
 #' @rdname internal_data
+#' @return A character vector of directory names to skip.
 #' @export
 #' @examples
 #' scan_skip_dirs()
