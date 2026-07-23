@@ -84,3 +84,34 @@ test_that("cite_usage defaults to package citations", {
     fixed = TRUE
   )))
 })
+
+test_that("cite_usage does not duplicate base citation when base is in packages", {
+  citations <- cite_usage(
+    structure(
+      list(packages = c("stats", "base"), functions = character()),
+      class = "scan_usage"
+    ),
+    format = "bibentry"
+  )
+  expect_length(citations, 2L)
+})
+
+test_that("cite_usage uses custom base citation override when base is not in packages", {
+  custom_base <- utils::bibentry(
+    bibtype = "Manual",
+    key = "custom-base",
+    title = "Custom Base",
+    author = "R",
+    year = "2026"
+  )
+  citations <- cite_usage(
+    structure(
+      list(packages = "stats", functions = character()),
+      class = "scan_usage"
+    ),
+    package_citations = list(base = custom_base),
+    format = "bibentry"
+  )
+  bibtex <- utils::toBibtex(citations)
+  expect_true(any(grepl("Custom Base", bibtex, fixed = TRUE)))
+})

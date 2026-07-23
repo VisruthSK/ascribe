@@ -30,23 +30,24 @@ cite_usage <- function(
   always_cite = character(),
   format = c("bibtex", "bibentry")
 ) {
+  pkgs <- unique(c(usage$packages, always_cite))
+  if (!length(pkgs) && !length(usage$functions)) {
+    return(character())
+  }
+
   entries <- c(
-    lapply(unique(c(usage$packages, always_cite)), \(pkg) {
+    lapply(unique(c(pkgs, "base")), \(pkg) {
       entry <- package_citations[[pkg]]
       if (is.null(entry)) {
-        package_citation(pkg)
+        if (pkg == "base") utils::citation("base") else package_citation(pkg)
       } else {
         entry
       }
     }),
     lapply(usage$functions, \(fun) function_citations[[fun]])
   ) |>
-    Filter(Negate(is.null), x = _)
+    Filter(Negate(is.null), x = _) |>
+    do.call(c, args = _)
 
-  if (!length(entries)) {
-    return(character())
-  }
-
-  entries <- do.call(c, entries) |> c(utils::citation("base"))
   if (match.arg(format) == "bibentry") entries else utils::toBibtex(entries)
 }
