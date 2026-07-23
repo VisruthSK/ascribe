@@ -35,10 +35,8 @@ attributing (unqualified) calls. Calls like \code{pkg::fun()} will NOT be ignore
 even if \code{fun} is in \code{ignore_unqualified_functions}, since they are
 namespaced.}
 
-\item{strict}{If \code{TRUE} (default), only count unqualified function calls
-whose origin can be determined exactly from the static scan, including
-attachment-order tie-breaks when the winner is unambiguous from the file.
-Unresolved calls are warned about and omitted.}
+\item{strict}{If \code{FALSE} (default), warn on ambiguous function calls whose
+origin cannot be determined exactly. If \code{TRUE}, abort on ambiguous calls.}
 
 \item{skip_dirs}{Character vector of directory names to skip when scanning a
 directory. Defaults to \code{scan_skip_dirs()}.}

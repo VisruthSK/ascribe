@@ -9,6 +9,7 @@ bibentry
 getters
 knitr
 namespaced
+precompiles
 qmd
 rda
 stanflow

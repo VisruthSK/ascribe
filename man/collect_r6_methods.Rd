@@ -19,7 +19,4 @@ Character vector of R6 method names.
 Scans both exported objects and namespace-internal objects for
 R6 class generators, then collects all public method names.
 }
-\examples{
-collect_r6_methods("testthat", getNamespaceExports("testthat"))
-}
 \keyword{internal}

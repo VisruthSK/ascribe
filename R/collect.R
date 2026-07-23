@@ -35,10 +35,7 @@ collect_pkg_funs <- function(pkg) {
 #' @param export_names Character vector of exported names (from
 #'   [getNamespaceExports()]).
 #' @return Character vector of R6 method names.
-#' @export
 #' @keywords internal
-#' @examples
-#' collect_r6_methods("testthat", getNamespaceExports("testthat"))
 collect_r6_methods <- function(pkg, export_names) {
   ns <- asNamespace(pkg)
 
