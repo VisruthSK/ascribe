@@ -6,3 +6,5 @@
 ^[.]?air[.]toml$
 ^\.vscode$
 ^jarl\.toml$
+^data-raw$
+^AGENTS\.md$

@@ -1,4 +1,3 @@
-
 # ascribe
 
 <!-- badges: start -->
@@ -6,7 +5,7 @@
 [![Codecov test coverage](https://codecov.io/gh/VisruthSK/ascribe/graph/badge.svg)](https://app.codecov.io/gh/VisruthSK/ascribe)
 <!-- badges: end -->
 
-The goal of ascribe is to ...
+ascribe scans R projects for package and function use. Other packages can use the results to generate citations without maintaining their own parser.
 
 ## Installation
 
@@ -19,10 +18,12 @@ pak::pak("VisruthSK/ascribe")
 
 ## Example
 
-This is a basic example which shows you how to solve a common problem:
+Build a package universe, then cite the code that uses it:
 
 ``` r
 library(ascribe)
-## basic example code
-```
 
+universe <- build_universe_data("stats")
+usage <- scan_usage(path, universe$packages, universe$export_index, universe$origin_map)
+cite_usage(usage)
+```
