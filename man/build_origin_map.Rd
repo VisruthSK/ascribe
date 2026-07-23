@@ -11,7 +11,7 @@ build_origin_map(exports)
 character vectors of function names.}
 }
 \value{
-Named character vector mapping \code{"pkg::fun"} to origin package.
+Environment mapping \code{"pkg::fun"} keys to origin package names.
 }
 \description{
 Given a named list mapping package names to character vectors of

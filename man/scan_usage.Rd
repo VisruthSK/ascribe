@@ -26,8 +26,8 @@ calls to.}
 
 \item{export_index}{Named list mapping function names to packages.}
 
-\item{origin_map}{Named character vector mapping \code{pkg::fun} keys to the
-origin package.}
+\item{origin_map}{Environment mapping \code{pkg::fun} keys to the origin package,
+as returned by \code{\link[=build_origin_map]{build_origin_map()}}.}
 
 \item{ignore_unqualified_functions}{Defaults to exports from base R packages
 listed in \code{stdlib_funs()}. Character vector of function names to ignore when
@@ -86,7 +86,7 @@ scan_usage(
   path,
   allowed_packages = c("stats", "utils"),
   export_index = list(filter = "stats"),
-  origin_map = c("stats::filter" = "stats"),
+  origin_map = list2env(list("stats::filter" = "stats"), parent = emptyenv()),
   ignore_unqualified_functions = character(),
   quiet = TRUE
 )

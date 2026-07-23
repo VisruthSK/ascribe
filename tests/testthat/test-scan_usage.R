@@ -25,7 +25,10 @@ test_that("scan_usage detects library attachments and namespaced calls", {
     path = tmp,
     allowed_packages = c("stats", "utils"),
     export_index = list(filter = "stats", head = "utils"),
-    origin_map = c("stats::filter" = "stats", "utils::head" = "utils"),
+    origin_map = list2env(
+      list("stats::filter" = "stats", "utils::head" = "utils"),
+      parent = emptyenv()
+    ),
     ignore_unqualified_functions = character(),
     quiet = TRUE
   )
@@ -64,7 +67,10 @@ test_that("scan_usage parses Rmd and Qmd code chunks natively", {
     path = tmp,
     allowed_packages = "stats",
     export_index = list(median = "stats", filter = "stats"),
-    origin_map = c("stats::median" = "stats", "stats::filter" = "stats"),
+    origin_map = list2env(
+      list("stats::median" = "stats", "stats::filter" = "stats"),
+      parent = emptyenv()
+    ),
     quiet = TRUE
   )
 
@@ -91,7 +97,10 @@ test_that("scan_usage works with use_knitr = TRUE", {
     path = tmp,
     allowed_packages = "stats",
     export_index = list(median = "stats"),
-    origin_map = c("stats::median" = "stats"),
+    origin_map = list2env(
+      list("stats::median" = "stats"),
+      parent = emptyenv()
+    ),
     use_knitr = TRUE,
     quiet = TRUE
   )
@@ -115,7 +124,10 @@ test_that("scan_usage handles metapackages correctly", {
     path = tmp,
     allowed_packages = "real_pkg",
     export_index = list(foo = "real_pkg"),
-    origin_map = c("real_pkg::foo" = "real_pkg"),
+    origin_map = list2env(
+      list("real_pkg::foo" = "real_pkg"),
+      parent = emptyenv()
+    ),
     metapackages = list(meta_pkg = "real_pkg"),
     ignore_unqualified_functions = character(),
     quiet = TRUE
@@ -143,9 +155,12 @@ test_that("scan_usage handles strict mode on ambiguous calls", {
       path = tmp,
       allowed_packages = c("pkgA", "pkgB"),
       export_index = list(ambiguous_fun = c("pkgA", "pkgB")),
-      origin_map = c(
-        "pkgA::ambiguous_fun" = "pkgA",
-        "pkgB::ambiguous_fun" = "pkgB"
+      origin_map = list2env(
+        list(
+          "pkgA::ambiguous_fun" = "pkgA",
+          "pkgB::ambiguous_fun" = "pkgB"
+        ),
+        parent = emptyenv()
       ),
       ignore_unqualified_functions = character(),
       strict = TRUE,
@@ -160,9 +175,12 @@ test_that("scan_usage handles strict mode on ambiguous calls", {
       path = tmp,
       allowed_packages = c("pkgA", "pkgB"),
       export_index = list(ambiguous_fun = c("pkgA", "pkgB")),
-      origin_map = c(
-        "pkgA::ambiguous_fun" = "pkgA",
-        "pkgB::ambiguous_fun" = "pkgB"
+      origin_map = list2env(
+        list(
+          "pkgA::ambiguous_fun" = "pkgA",
+          "pkgB::ambiguous_fun" = "pkgB"
+        ),
+        parent = emptyenv()
       ),
       ignore_unqualified_functions = character(),
       strict = FALSE,
@@ -192,7 +210,7 @@ test_that("scan_usage errors on invalid inputs and path combinations", {
       path = c(tmp1, tmp_dir),
       allowed_packages = "stats",
       export_index = list(),
-      origin_map = character(),
+      origin_map = new.env(parent = emptyenv()),
       quiet = TRUE
     ),
     "must be a single directory or a vector of files"
@@ -207,7 +225,7 @@ test_that("scan_usage errors on invalid inputs and path combinations", {
       path = empty_dir,
       allowed_packages = "stats",
       export_index = list(),
-      origin_map = character(),
+      origin_map = new.env(parent = emptyenv()),
       quiet = TRUE
     ),
     "No files found"
@@ -222,7 +240,7 @@ test_that("scan_usage errors on invalid inputs and path combinations", {
       path = tmp_txt,
       allowed_packages = "stats",
       export_index = list(),
-      origin_map = character(),
+      origin_map = new.env(parent = emptyenv()),
       quiet = TRUE
     ),
     "Unsupported file extension"
@@ -244,7 +262,7 @@ test_that("scan_usage skips specified directories when scanning directory", {
     path = tmp_dir,
     allowed_packages = c("stats", "utils"),
     export_index = list(),
-    origin_map = character(),
+    origin_map = new.env(parent = emptyenv()),
     skip_dirs = "renv",
     quiet = TRUE
   )
@@ -263,7 +281,7 @@ test_that("scan_usage handles syntax errors gracefully with warning", {
       path = tmp,
       allowed_packages = "stats",
       export_index = list(),
-      origin_map = character(),
+      origin_map = new.env(parent = emptyenv()),
       quiet = TRUE
     ),
     "Failed to parse"
@@ -289,7 +307,10 @@ test_that("scan_usage handles member calls, slot calls, and use() calls", {
     path = tmp,
     allowed_packages = "stats",
     export_index = list(filter = "stats"),
-    origin_map = c("stats::filter" = "stats"),
+    origin_map = list2env(
+      list("stats::filter" = "stats"),
+      parent = emptyenv()
+    ),
     quiet = TRUE
   )
 
@@ -306,7 +327,7 @@ test_that("scan_usage returns empty results when allowed_packages is empty or no
     path = tmp,
     allowed_packages = "stats",
     export_index = list(),
-    origin_map = character(),
+    origin_map = new.env(parent = emptyenv()),
     quiet = TRUE
   )
   expect_equal(res$packages, character())
@@ -316,7 +337,7 @@ test_that("scan_usage returns empty results when allowed_packages is empty or no
     path = tmp,
     allowed_packages = character(),
     export_index = list(),
-    origin_map = character(),
+    origin_map = new.env(parent = emptyenv()),
     quiet = TRUE
   )
   expect_equal(res_empty_allowed$packages, character())
@@ -360,7 +381,7 @@ test_that("full coverage tests for all scan_usage.R branches", {
     path = nested_dir,
     allowed_packages = "stats",
     export_index = list(),
-    origin_map = character(),
+    origin_map = new.env(parent = emptyenv()),
     quiet = TRUE
   )
   expect_true("stats" %in% res_nested$packages)
@@ -410,90 +431,60 @@ test_that("full coverage tests for all scan_usage.R branches", {
     ignore_unqualified_functions = character(),
     allowed_packages = "stats",
     export_index = list(filter = "stats"),
-    origin_map = c("stats::filter" = "stats"),
+    origin_map = list2env(
+      list("stats::filter" = "stats"),
+      parent = emptyenv()
+    ),
     resolver_index = NULL
   )
   expect_true("stats" %in% hits_null_resolver$pkgs)
 
-  # .ast_walk edge cases
-  ast_walk <- .ast_walk
+  # .make_ast_walker edge cases (replaced .ast_walk after closure refactor)
   ignore <- ascribe::stdlib_funs()
-  lib_funs <- .scan_lib_funs
-  ns_ops <- .scan_ns_ops
-  use_heads <- .scan_use_heads
-  ignore_heads <- .scan_ignore_heads
 
-  acc <- new.env(parent = emptyenv())
-  acc$visit_idx <- 0L
-  acc$lib_pkgs <- character()
-  acc$lib_visit_idx <- integer()
-  acc$lib_is_attach <- logical()
-  acc$ns_pkgs <- character()
-  acc$ns_keys <- character()
-  acc$unqual_funs <- character()
-  acc$unqual_visit_idx <- integer()
+  make_acc <- function() {
+    acc <- new.env(parent = emptyenv())
+    acc$visit_idx <- 0L
+    acc$lib_pkgs <- character()
+    acc$lib_visit_idx <- integer()
+    acc$lib_is_attach <- logical()
+    acc$ns_pkgs <- character()
+    acc$ns_keys <- character()
+    acc$unqual_funs <- character()
+    acc$unqual_visit_idx <- integer()
+    acc
+  }
 
-  # .ast_walk NULL, expression, pairlist, list, atom
-  expect_invisible(ast_walk(
-    NULL,
-    acc,
-    ignore,
-    lib_funs,
-    "stats",
-    ns_ops,
-    use_heads,
-    ignore_heads,
-    character(),
-    NULL
-  ))
-  expect_invisible(ast_walk(
-    expression(stats::median(1)),
-    acc,
-    ignore,
-    lib_funs,
-    "stats",
-    ns_ops,
-    use_heads,
-    ignore_heads,
-    "median",
-    NULL
-  ))
-  expect_invisible(ast_walk(
-    list(quote(stats::median(1))),
-    acc,
-    ignore,
-    lib_funs,
-    "stats",
-    ns_ops,
-    use_heads,
-    ignore_heads,
-    "median",
-    NULL
-  ))
-  expect_invisible(ast_walk(
+  walk_empty <- .make_ast_walker(
+    ignore_unqualified_functions = ignore,
+    lib_funs = .scan_lib_funs,
+    allowed_packages = "stats",
+    ns_ops = .scan_ns_ops,
+    use_heads = .scan_use_heads,
+    ignore_heads = .scan_ignore_heads,
+    export_names = character(),
+    metapackages = NULL
+  )
+  walk_median <- .make_ast_walker(
+    ignore_unqualified_functions = ignore,
+    lib_funs = .scan_lib_funs,
+    allowed_packages = "stats",
+    ns_ops = .scan_ns_ops,
+    use_heads = .scan_use_heads,
+    ignore_heads = .scan_ignore_heads,
+    export_names = "median",
+    metapackages = NULL
+  )
+
+  # NULL, expression, pairlist, list, atom
+  expect_invisible(walk_empty(NULL, make_acc()))
+  expect_invisible(walk_median(expression(stats::median(1)), make_acc()))
+  expect_invisible(walk_median(list(quote(stats::median(1))), make_acc()))
+  expect_invisible(walk_median(
     pairlist(a = quote(stats::median(1))),
-    acc,
-    ignore,
-    lib_funs,
-    "stats",
-    ns_ops,
-    use_heads,
-    ignore_heads,
-    "median",
-    NULL
+    make_acc()
   ))
-  expect_invisible(ast_walk(
-    quote(atom),
-    acc,
-    ignore,
-    lib_funs,
-    "stats",
-    ns_ops,
-    use_heads,
-    ignore_heads,
-    "median",
-    NULL
-  ))
+  expect_invisible(walk_median(quote(atom), make_acc()))
 
   # .ast_member_fun edge cases
   expect_equal(.ast_member_fun(quote((1 + 1)$foo)), "foo")
@@ -535,11 +526,14 @@ test_that("full coverage tests for all scan_usage.R branches", {
   )
 
   # .scan_resolver_index with empty provider list
-  idx <- .scan_resolver_index(list(foo = character()), character())
+  idx <- .scan_resolver_index(
+    list(foo = character()),
+    new.env(parent = emptyenv())
+  )
   expect_null(idx$foo)
   idx_empty_origin <- .scan_resolver_index(
     list(foo = "pkgA"),
-    character()
+    new.env(parent = emptyenv())
   )
   expect_equal(idx_empty_origin$foo$origin, "pkgA")
 
@@ -646,7 +640,10 @@ test_that("full coverage tests for all scan_usage.R branches", {
   )
   unqual_data <- list(funs = "foo", idx = 3L)
   export_idx <- list(foo = c("pkgA", "pkgB"))
-  origin_map <- c("pkgA::foo" = "pkgA", "pkgB::foo" = "pkgB")
+  origin_map <- list2env(
+    list("pkgA::foo" = "pkgA", "pkgB::foo" = "pkgB"),
+    parent = emptyenv()
+  )
 
   cand_res <- .resolve_candidates(
     unqual_data,
@@ -665,7 +662,11 @@ test_that("full coverage tests for all scan_usage.R branches", {
       writeLines("```{r}\nlibrary(stats)\n```", tmp_rmd)
       on.exit(unlink(tmp_rmd), add = TRUE)
       expect_error(
-        .extract_code(tmp_rmd, allowed_packages = "stats", use_knitr = TRUE),
+        .extract_code(
+          tmp_rmd,
+          skip_pattern = "\\b(stats)\\b",
+          use_knitr = TRUE
+        ),
         "Package knitr is required"
       )
     }
