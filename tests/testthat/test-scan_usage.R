@@ -672,3 +672,21 @@ test_that("full coverage tests for all scan_usage.R branches", {
     }
   )
 })
+
+test_that(".scan_resolver_index handles empty provider list, missing origin map, and unmapped multi-provider functions", {
+  idx_empty <- list(foo = character())
+  res_empty <- .scan_resolver_index(idx_empty, NULL)
+  expect_null(res_empty$foo)
+
+  idx_multi <- list(single = "pkgA", multi = c("pkgA", "pkgB"))
+  res_null <- .scan_resolver_index(idx_multi, NULL)
+  expect_equal(res_null$single, list(provider = "pkgA", origin = "pkgA"))
+  expect_equal(
+    res_null$multi,
+    list(provider = c("pkgA", "pkgB"), origin = c("pkgA", "pkgB"))
+  )
+
+  origin_map <- list2env(list("pkgA::multi" = "originA"), parent = emptyenv())
+  res_map <- .scan_resolver_index(idx_multi, origin_map)
+  expect_equal(res_map$multi$origin, c("originA", "pkgB"))
+})

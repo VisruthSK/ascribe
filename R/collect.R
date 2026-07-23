@@ -88,10 +88,11 @@ resolve_origin <- function(pkg, name) {
 
   env <- environment(obj)
   origin <- if (is.null(env)) "" else environmentName(env)
+  origin <- sub("^namespace:", "", origin)
   if (!nzchar(origin)) {
     return(NA_character_)
   }
-  sub("^namespace:", "", origin)
+  origin
 }
 
 #' Build an inverted export index

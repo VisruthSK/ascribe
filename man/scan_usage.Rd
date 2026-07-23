@@ -14,7 +14,8 @@ scan_usage(
   skip_dirs = .scan_skip_dirs,
   metapackages = NULL,
   use_knitr = FALSE,
-  quiet = FALSE
+  quiet = FALSE,
+  resolver_index = NULL
 )
 }
 \arguments{
@@ -51,6 +52,10 @@ but much slower than the default in-house parser. Defaults to \code{FALSE}.}
 
 \item{quiet}{Logical. If \code{TRUE}, suppresses status messages. Defaults to
 \code{FALSE}.}
+
+\item{resolver_index}{Optional precomputed index mapping function names to
+provider packages and origins (as computed by \code{.scan_resolver_index()}).
+Defaults to \code{NULL}.}
 }
 \value{
 A list of packages, resolved functions, and ambiguous function calls.

@@ -37,6 +37,9 @@
 #'   but much slower than the default in-house parser. Defaults to `FALSE`.
 #' @param quiet Logical. If `TRUE`, suppresses status messages. Defaults to
 #'   `FALSE`.
+#' @param resolver_index Optional precomputed index mapping function names to
+#'   provider packages and origins (as computed by `.scan_resolver_index()`).
+#'   Defaults to `NULL`.
 #' @return A list of packages, resolved functions, and ambiguous function calls.
 #' @export
 #' @examples
@@ -70,7 +73,8 @@ scan_usage <- function(
   skip_dirs = .scan_skip_dirs,
   metapackages = NULL,
   use_knitr = FALSE,
-  quiet = FALSE
+  quiet = FALSE,
+  resolver_index = NULL
 ) {
   if (quiet) {
     old_options <- options(cli.default_handler = \(msg) invisible(NULL))
@@ -110,18 +114,8 @@ scan_usage <- function(
   # Build skip_pattern once here rather than once per file inside .extract_code
   skip_pkgs <- c(allowed_packages, names(metapackages))
   skip_pattern <- if (length(skip_pkgs)) {
-    paste0(
-      "\\b(",
-      paste(
-        unique(vapply(
-          skip_pkgs,
-          \(x) gsub("([][{}()+*^$|\\\\.?])", "\\\\\\1", x),
-          character(1)
-        )),
-        collapse = "|"
-      ),
-      ")\\b"
-    )
+    escaped <- gsub("([][{}()+*^$|\\\\.?])", "\\\\\\1", unique(skip_pkgs))
+    paste0("\\b(", paste(escaped, collapse = "|"), ")\\b")
   } else {
     NULL
   }
@@ -302,51 +296,51 @@ scan_usage <- function(
     return("")
   }
 
+  fence_lines <- lines[fence_rows]
+  caps <- regmatches(
+    fence_lines,
+    regexec(
+      "^\\s*([`~]{3,})\\s*\\{\\s*[rR]\\b[^}]*\\}\\s*$",
+      fence_lines,
+      perl = TRUE
+    )
+  )
+
   chunks <- vector("list", length(fence_rows))
   j <- 0L
   k <- 1L
-  while (k <= length(fence_rows)) {
-    i <- fence_rows[[k]]
-    cap <- regmatches(
-      lines[[i]],
-      regexec(
-        "^\\s*([`~]{3,})\\s*\\{\\s*[rR]\\b[^}]*\\}\\s*$",
-        lines[[i]],
-        perl = TRUE
-      )
-    )[[1L]]
+  n_fences <- length(fence_rows)
+
+  while (k <= n_fences) {
+    cap <- caps[[k]]
     if (!length(cap)) {
-      k <- k + 1
+      k <- k + 1L
       next
     }
 
     fence <- cap[[2L]]
     fence_char <- substr(fence, 1L, 1L)
-    close_pat <- paste0(
-      "^\\s*",
-      gsub("([][{}()+*^$|\\\\.?])", "\\\\\\1", fence_char),
-      "{",
-      nchar(fence),
-      ",}\\s*$"
-    )
+    escaped_char <- if (fence_char == "`") "\\`" else "~"
+    close_pat <- paste0("^\\s*", escaped_char, "{", nchar(fence), ",}\\s*$")
 
+    i <- fence_rows[[k]]
     start <- i + 1L
-    k <- k + 1
+    k <- k + 1L
     close_row <- n + 1L
-    while (k <= length(fence_rows)) {
-      i <- fence_rows[[k]]
-      if (grepl(close_pat, lines[[i]], perl = TRUE)) {
-        close_row <- i
+
+    while (k <= n_fences) {
+      if (grepl(close_pat, fence_lines[[k]], perl = TRUE)) {
+        close_row <- fence_rows[[k]]
         break
       }
-      k <- k + 1
+      k <- k + 1L
     }
 
     if (close_row > start) {
       j <- j + 1L
       chunks[[j]] <- c(lines[start:(close_row - 1L)], "")
     }
-    k <- k + 1
+    k <- k + 1L
   }
 
   if (!j) {
@@ -513,7 +507,7 @@ scan_usage <- function(
 
       head <- x[[1L]]
       head_name <- if (is.symbol(head)) as.character(head) else NULL
-      member_fun <- .ast_member_fun(head)
+      member_fun <- if (is.call(head)) .ast_member_fun(head) else NULL
 
       # Member calls (e.g., obj$sample()) are package API methods, not
       # language-level calls; don't suppress them via stdlib ignore lists.
@@ -526,7 +520,7 @@ scan_usage <- function(
       }
 
       if (!is.null(head_name)) {
-        if (!is.na(fastmatch::fmatch(head_name, ns_ops)) && length(x) >= 3L) {
+        if ((head_name == "::" || head_name == ":::") && length(x) >= 3L) {
           pkg <- .ast_lit_name(x[[2L]])
           fun <- .ast_lit_name(x[[3L]])
           if (
@@ -548,7 +542,11 @@ scan_usage <- function(
               acc$ns_keys <- c(acc$ns_keys, paste0(pkg, "::", funs))
             }
           }
-        } else if (!is.na(fastmatch::fmatch(head_name, lib_funs))) {
+        } else if (
+          head_name == "library" ||
+            head_name == "require" ||
+            head_name == "requireNamespace"
+        ) {
           pkg <- .ast_get_lib_pkg(x)
           if (!is.null(pkg)) {
             is_allowed <- !is.na(fastmatch::fmatch(pkg, allowed_packages))
@@ -622,10 +620,6 @@ scan_usage <- function(
 }
 
 .ast_member_fun <- function(head) {
-  if (!is.call(head) || !length(head)) {
-    return(NULL)
-  }
-
   op <- head[[1L]]
   if (!is.symbol(op)) {
     return(NULL)
@@ -755,18 +749,33 @@ scan_usage <- function(
     return(list())
   }
 
-  stats::setNames(
-    lapply(
-      funs,
-      \(fun) {
-        providers <- export_index[[fun]]
-        if (is.null(providers) || !length(providers)) {
-          return(NULL)
-        }
+  has_map <- !is.null(origin_map)
 
-        # Build keys and batch-fetch origins from the hash env
-        keys <- paste0(providers, "::", fun)
-        origins <- vapply(
+  res <- lapply(
+    seq_along(export_index),
+    \(i) {
+      providers <- export_index[[i]]
+      fun <- funs[[i]]
+      n <- length(providers)
+      if (n == 0L) {
+        return(NULL)
+      }
+
+      if (n == 1L) {
+        orig <- if (has_map) {
+          origin_map[[paste0(providers, "::", fun)]]
+        } else {
+          NULL
+        }
+        if (is.null(orig) || !nzchar(orig)) {
+          orig <- providers
+        }
+        return(list(provider = providers, origin = orig))
+      }
+
+      keys <- paste0(providers, "::", fun)
+      origins <- if (has_map) {
+        vapply(
           keys,
           \(k) {
             v <- origin_map[[k]]
@@ -775,15 +784,18 @@ scan_usage <- function(
           character(1),
           USE.NAMES = FALSE
         )
-        # Fall back to provider name when origin is missing
-        missing <- !nzchar(origins)
-        origins[missing] <- providers[missing]
-
-        list(provider = providers, origin = origins)
+      } else {
+        character(n)
       }
-    ),
-    funs
+      missing <- !nzchar(origins)
+      origins[missing] <- providers[missing]
+
+      list(provider = providers, origin = origins)
+    }
   )
+
+  names(res) <- funs
+  res
 }
 
 .resolve_meta <- function(
