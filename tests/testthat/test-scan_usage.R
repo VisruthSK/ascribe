@@ -671,6 +671,18 @@ test_that("full coverage tests for all scan_usage.R branches", {
       )
     }
   )
+
+  if (requireNamespace("knitr", quietly = TRUE)) {
+    tmp_rmd_knitr <- tempfile(fileext = ".Rmd")
+    writeLines("```{r}\nlibrary(stats)\n```", tmp_rmd_knitr)
+    on.exit(unlink(tmp_rmd_knitr), add = TRUE)
+    res_knitr_code <- .extract_code(
+      tmp_rmd_knitr,
+      skip_pattern = "\\b(stats)\\b",
+      use_knitr = TRUE
+    )
+    expect_match(res_knitr_code, "library(stats)", fixed = TRUE)
+  }
 })
 
 test_that(".scan_resolver_index handles empty provider list, missing origin map, and unmapped multi-provider functions", {
@@ -719,14 +731,22 @@ test_that("full coverage for .scan_dir_files skip_dirs and .extract_code skip_pa
 
   # 4-arg function call to trigger n > 3L AST loop
   tmp_4arg <- tempfile(fileext = ".R")
-  writeLines("library(stats)\nfilter(1, 2, 3, 4)", tmp_4arg)
+  writeLines("library(pkgA)\nmyfun(1, 2, 3, 4)", tmp_4arg)
   on.exit(unlink(tmp_4arg), add = TRUE)
   res_4arg <- scan_usage(
     tmp_4arg,
-    allowed_packages = "stats",
-    export_index = list(filter = "stats"),
-    origin_map = list2env(list("stats::filter" = "stats"), parent = emptyenv()),
+    allowed_packages = "pkgA",
+    export_index = list(myfun = "pkgA"),
+    origin_map = list2env(list("pkgA::myfun" = "pkgA"), parent = emptyenv()),
     quiet = TRUE
   )
-  expect_true("stats::filter" %in% res_4arg$functions)
+  expect_true("pkgA::myfun" %in% res_4arg$functions)
+
+  # .scan_tokens early return when code contains no allowed package
+  tokens_no_pkg <- .scan_tokens(
+    "x <- 1 + 2",
+    ignore_unqualified_functions = character(0),
+    allowed_packages = "allowedPkg"
+  )
+  expect_equal(tokens_no_pkg$pkgs, character(0))
 })
