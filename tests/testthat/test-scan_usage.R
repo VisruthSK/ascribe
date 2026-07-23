@@ -506,7 +506,7 @@ test_that("full coverage tests for all scan_usage.R branches", {
     "stats"
   )
   expect_equal(
-    .ast_get_lib_pkg(quote(library(pkg = "stats"))),
+    .ast_get_lib_pkg(as.call(list(as.name("library"), pkg = "stats"))),
     "stats"
   )
   expect_null(.ast_get_lib_pkg(quote(library())))
@@ -658,7 +658,7 @@ test_that("full coverage tests for all scan_usage.R branches", {
   expect_equal(cand_res$pkgs, "pkgB")
 
   testthat::with_mocked_bindings(
-    requireNamespace = \(pkg, quietly) FALSE,
+    .ascribe_require_namespace = \(pkg, quietly) FALSE,
     .package = "ascribe",
     {
       tmp_rmd <- tempfile(fileext = ".Rmd")

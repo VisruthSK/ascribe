@@ -275,7 +275,7 @@ scan_usage <- function(
   }
 
   if (use_knitr) {
-    if (!requireNamespace("knitr", quietly = TRUE)) {
+    if (!.ascribe_require_namespace("knitr", quietly = TRUE)) {
       cli::cli_abort(c(
         "Package {.pkg knitr} is required to parse R Markdown ({.file .Rmd}) or Quarto ({.file .qmd}) files when {.code use_knitr = TRUE}.",
         "i" = "Install it with {.code install.packages('knitr')} or use the default in-house parser."

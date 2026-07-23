@@ -22,7 +22,7 @@
 #' build_universe_data(c("stats", "utils"))
 build_universe_data <- function(packages) {
   missing <- packages[
-    !vapply(packages, requireNamespace, logical(1), quietly = TRUE)
+    !vapply(packages, .ascribe_require_namespace, logical(1), quietly = TRUE)
   ]
   if (length(missing) > 0) {
     cli::cli_abort("The following packages are not installed: {.pkg {missing}}")
