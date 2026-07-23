@@ -61,7 +61,7 @@ path <- tempfile(fileext = ".R")
 writeLines("stats::median(1:3)", path)
 universe <- build_universe_data(c("stats", "tools"))
 usage <- scan_usage(path, universe$packages, universe$export_index, universe$origin_map)
-#> ℹ Searching /tmp/Rtmpihmqbe/file19613f4e08d4.R
+#> ℹ Searching /tmp/RtmpSTQqH6/file191340bea492.R
 cite_usage(usage)
 #> @Manual{,
 #>   title = {R: A Language and Environment for Statistical Computing},
