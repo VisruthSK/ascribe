@@ -4,7 +4,7 @@
 \name{ascribe-package}
 \alias{ascribe}
 \alias{ascribe-package}
-\title{ascribe: Static AST Scanning of R Package and Function Usage}
+\title{ascribe: Static Detection and Citation of R Package and Function Usage}
 \description{
 Scans R source files for package and function use, then builds citations from configurable package universes. Supports .R, .Rmd, and .qmd files, resolves unqualified calls by attachment order and re-export origin, and leaves each package collection to define its own citations. See 'stanflow' \url{https://github.com/VisruthSK/stanflow} for an example usage.
 }
