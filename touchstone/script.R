@@ -6,7 +6,7 @@ local({
   unlockBinding("install_missing_deps", ns)
   assign(
     "install_missing_deps",
-    function(path_pkg, quiet = FALSE) {
+    \(path_pkg, quiet = FALSE) {
       remotes::install_deps(pkgdir = path_pkg, upgrade = "never", quiet = quiet)
     },
     envir = ns
@@ -14,27 +14,19 @@ local({
   lockBinding("install_missing_deps", ns)
 })
 
-# Install both branches to benchmark
 branch_install()
 
-# Clone pinned repositories for benchmarking
 base_dir <- file.path("touchstone", "sources")
 dir.create(base_dir, recursive = TRUE, showWarnings = FALSE)
 
 n <- 30
 repos <- list(
-  list(
-    url = "https://github.com/tidyverse/ggplot2.git",
-    ref = "v4.0.2"
-  ),
+  list(url = "https://github.com/tidyverse/ggplot2.git", ref = "v4.0.2"),
   list(
     url = "https://github.com/ASKurz/Statistical_Rethinking_with_brms_ggplot2_and_the_tidyverse.git",
     ref = "1.4.0"
   ),
-  list(
-    url = "https://github.com/stan-dev/loo.git",
-    ref = "v2.9.0"
-  )
+  list(url = "https://github.com/stan-dev/loo.git", ref = "v2.9.0")
 )
 
 clone_repo <- function(url, ref, dir) {
@@ -45,88 +37,78 @@ clone_repo <- function(url, ref, dir) {
   }
 }
 
+candidate_pkgs <- c(
+  "ggplot2",
+  "dplyr",
+  "loo",
+  "brms",
+  "posterior",
+  "bayesplot",
+  "rstan",
+  "stats",
+  "utils",
+  "graphics",
+  "grDevices",
+  "methods",
+  "grid",
+  "tools"
+)
+
+expr_before <- quote({
+  library(ascribe)
+  if (requireNamespace("knitr", quietly = TRUE)) {
+    library(knitr)
+  }
+  pkgs <- candidate_pkgs[vapply(
+    candidate_pkgs,
+    requireNamespace,
+    logical(1),
+    quietly = TRUE
+  )]
+  universe <- build_universe_data(pkgs)
+})
+
 for (repo in repos) {
   dir <- sub("\\.git$", "", basename(repo$url))
   repo_path <- file.path(base_dir, dir)
   clone_repo(repo$url, repo$ref, dir)
-  benchmark_run(
-    expr_before_benchmark = {
-      library(ascribe)
-      candidate_pkgs <- c(
-        "ggplot2",
-        "dplyr",
-        "loo",
-        "brms",
-        "posterior",
-        "bayesplot",
-        "rstan",
-        "stats",
-        "utils",
-        "graphics",
-        "grDevices",
-        "methods",
-        "grid",
-        "tools"
+
+  if (dir == "loo") {
+    benchmark_run(
+      expr_before_benchmark = !!expr_before,
+      n = n,
+      loo := scan_usage(
+        path = !!repo_path,
+        allowed_packages = universe$packages,
+        export_index = universe$export_index,
+        origin_map = universe$origin_map,
+        strict = FALSE,
+        quiet = TRUE
+      ),
+      loo_knitr := scan_usage(
+        path = !!repo_path,
+        allowed_packages = universe$packages,
+        export_index = universe$export_index,
+        origin_map = universe$origin_map,
+        strict = FALSE,
+        quiet = TRUE,
+        use_knitr = TRUE
       )
-      pkgs <- candidate_pkgs[vapply(
-        candidate_pkgs,
-        requireNamespace,
-        logical(1),
-        quietly = TRUE
-      )]
-      universe <- build_universe_data(pkgs)
-    },
-    n = n,
-    !!dir := scan_usage(
-      path = !!repo_path,
-      allowed_packages = universe$packages,
-      export_index = universe$export_index,
-      origin_map = universe$origin_map,
-      strict = FALSE,
-      quiet = TRUE
     )
-  )
+  } else {
+    benchmark_run(
+      expr_before_benchmark = !!expr_before,
+      n = n,
+      !!dir := scan_usage(
+        path = !!repo_path,
+        allowed_packages = universe$packages,
+        export_index = universe$export_index,
+        origin_map = universe$origin_map,
+        strict = FALSE,
+        quiet = TRUE
+      )
+    )
+  }
 }
 
-loo_path <- file.path(base_dir, "loo")
-benchmark_run(
-  expr_before_benchmark = {
-    library(ascribe)
-    candidate_pkgs <- c(
-      "ggplot2",
-      "dplyr",
-      "loo",
-      "brms",
-      "posterior",
-      "bayesplot",
-      "rstan",
-      "stats",
-      "utils",
-      "graphics",
-      "grDevices",
-      "methods",
-      "grid",
-      "tools"
-    )
-    pkgs <- candidate_pkgs[vapply(
-      candidate_pkgs,
-      requireNamespace,
-      logical(1),
-      quietly = TRUE
-    )]
-    universe <- build_universe_data(pkgs)
-  },
-  n = n,
-  loo_knitr := scan_usage(
-    path = !!loo_path,
-    allowed_packages = universe$packages,
-    export_index = universe$export_index,
-    origin_map = universe$origin_map,
-    strict = FALSE,
-    quiet = TRUE,
-    use_knitr = TRUE
-  )
-)
-
-# Analyze and report the results
 benchmark_analyze()

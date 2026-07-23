@@ -79,6 +79,26 @@ test_that("scan_usage parses Rmd and Qmd code chunks natively", {
   expect_true("stats::filter" %in% res$functions)
 })
 
+test_that("scan_usage returns empty for Rmd without code fences", {
+  tmp <- tempfile(fileext = ".Rmd")
+  on.exit(unlink(tmp), add = TRUE)
+  writeLines(c("# Header", "Just prose mentioning stats."), tmp)
+
+  res <- scan_usage(
+    path = tmp,
+    allowed_packages = "stats",
+    export_index = list(median = "stats"),
+    origin_map = list2env(
+      list("stats::median" = "stats"),
+      parent = emptyenv()
+    ),
+    quiet = TRUE
+  )
+
+  expect_equal(res$packages, character())
+  expect_equal(res$functions, character())
+})
+
 test_that("scan_usage works with use_knitr = TRUE", {
   skip_if_not_installed("knitr")
   tmp <- tempfile(fileext = ".Rmd")
