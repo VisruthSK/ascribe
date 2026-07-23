@@ -7,14 +7,14 @@
 
 ## Citation
 
-Srimath Kandali V (2026). *ascribe: What the Package Does (One Line,
-Title Case)*. R package version 0.0.0.9000,
-<https://visruthsk.github.io/ascribe/>.
+Srimath Kandali V (2026). *ascribe: Static AST Scanning of R Package and
+Function Usage*. R package version 0.0.0.9000,
+<https://ascribe.visruth.com>.
 
     @Manual{,
-      title = {ascribe: What the Package Does (One Line, Title Case)},
+      title = {ascribe: Static AST Scanning of R Package and Function Usage},
       author = {Visruth {Srimath Kandali}},
       year = {2026},
       note = {R package version 0.0.0.9000},
-      url = {https://visruthsk.github.io/ascribe/},
+      url = {https://ascribe.visruth.com},
     }

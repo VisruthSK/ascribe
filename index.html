@@ -5,14 +5,14 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>What the Package Does (One Line, Title Case) • ascribe</title>
+<title>Static AST Scanning of R Package and Function Usage • ascribe</title>
 <script src="deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
 <script src="deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="What the Package Does (One Line, Title Case)">
-<meta name="description" content="What the package does (one paragraph).">
-<meta property="og:description" content="What the package does (one paragraph).">
+<script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="Static AST Scanning of R Package and Function Usage">
+<meta name="description" content="Scans R source files for package and function use, then builds citations from configurable package universes. Supports .R, .Rmd, and .qmd files, resolves unqualified calls by attachment order and re-export origin, and leaves each package collection to define its own citations. See stanflow for an example usage.">
+<meta property="og:description" content="Scans R source files for package and function use, then builds citations from configurable package universes. Supports .R, .Rmd, and .qmd files, resolves unqualified calls by attachment order and re-export origin, and leaves each package collection to define its own citations. See stanflow for an example usage.">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -50,7 +50,7 @@
 </h1></div>
 <!-- badges: start -->
 
-<p>The goal of ascribe is to …</p>
+<p>ascribe scans R projects for package and function use. Other packages can use the results to generate citations without maintaining their own parser.</p>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
@@ -62,10 +62,13 @@
 <div class="section level2">
 <h2 id="example">Example<a class="anchor" aria-label="anchor" href="#example"></a>
 </h2>
-<p>This is a basic example which shows you how to solve a common problem:</p>
+<p>Build a package universe, then cite the code that uses it:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://visruthsk.github.io/ascribe/">ascribe</a></span><span class="op">)</span></span>
-<span><span class="co">## basic example code</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ascribe.visruth.com" class="external-link">ascribe</a></span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">universe</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/build_universe_data.html">build_universe_data</a></span><span class="op">(</span><span class="st">"stats"</span><span class="op">)</span></span>
+<span><span class="va">usage</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/scan_usage.html">scan_usage</a></span><span class="op">(</span><span class="va">path</span>, <span class="va">universe</span><span class="op">$</span><span class="va">packages</span>, <span class="va">universe</span><span class="op">$</span><span class="va">export_index</span>, <span class="va">universe</span><span class="op">$</span><span class="va">origin_map</span><span class="op">)</span></span>
+<span><span class="fu"><a href="reference/cite_usage.html">cite_usage</a></span><span class="op">(</span><span class="va">usage</span><span class="op">)</span></span></code></pre></div>
 </div>
 </div>
   </main><aside class="col-md-3"><div class="license">

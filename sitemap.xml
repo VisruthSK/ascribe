@@ -1,10 +1,22 @@
 <urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
 <url><loc>https://visruthsk.github.io/ascribe/404.html</loc></url>
+<url><loc>https://visruthsk.github.io/ascribe/AGENTS.html</loc></url>
 <url><loc>https://visruthsk.github.io/ascribe/LICENSE-text.html</loc></url>
 <url><loc>https://visruthsk.github.io/ascribe/LICENSE.html</loc></url>
 <url><loc>https://visruthsk.github.io/ascribe/authors.html</loc></url>
 <url><loc>https://visruthsk.github.io/ascribe/index.html</loc></url>
 <url><loc>https://visruthsk.github.io/ascribe/news/index.html</loc></url>
+<url><loc>https://visruthsk.github.io/ascribe/reference/ascribe-package.html</loc></url>
+<url><loc>https://visruthsk.github.io/ascribe/reference/build_export_index.html</loc></url>
+<url><loc>https://visruthsk.github.io/ascribe/reference/build_origin_map.html</loc></url>
+<url><loc>https://visruthsk.github.io/ascribe/reference/build_universe_data.html</loc></url>
+<url><loc>https://visruthsk.github.io/ascribe/reference/cite_usage.html</loc></url>
+<url><loc>https://visruthsk.github.io/ascribe/reference/collect_pkg_funs.html</loc></url>
+<url><loc>https://visruthsk.github.io/ascribe/reference/collect_r6_methods.html</loc></url>
+<url><loc>https://visruthsk.github.io/ascribe/reference/generate_universe_sysdata.html</loc></url>
 <url><loc>https://visruthsk.github.io/ascribe/reference/index.html</loc></url>
+<url><loc>https://visruthsk.github.io/ascribe/reference/internal_data.html</loc></url>
+<url><loc>https://visruthsk.github.io/ascribe/reference/resolve_origin.html</loc></url>
+<url><loc>https://visruthsk.github.io/ascribe/reference/scan_usage.html</loc></url>
 </urlset>
 
