@@ -690,3 +690,43 @@ test_that(".scan_resolver_index handles empty provider list, missing origin map,
   res_map <- .scan_resolver_index(idx_multi, origin_map)
   expect_equal(res_map$multi$origin, c("originA", "pkgB"))
 })
+
+test_that("full coverage for .scan_dir_files skip_dirs and .extract_code skip_pattern", {
+  tmp_dir <- tempfile("skip_dir_test_")
+  dir.create(tmp_dir)
+  skip_dir <- file.path(tmp_dir, "skipme")
+  dir.create(skip_dir)
+  writeLines("library(stats)", file.path(skip_dir, "file.R"))
+  keep_dir <- file.path(tmp_dir, "keepme")
+  dir.create(keep_dir)
+  writeLines("library(stats)", file.path(keep_dir, "file.R"))
+  on.exit(unlink(tmp_dir, recursive = TRUE), add = TRUE)
+
+  files <- .scan_dir_files(tmp_dir, skip_dirs = "skipme")
+  expect_false(any(grepl("skipme", files)))
+  expect_true(any(grepl("keepme", files)))
+
+  # .extract_code skip_pattern no match
+  tmp_r <- tempfile(fileext = ".R")
+  writeLines("x <- 1", tmp_r)
+  on.exit(unlink(tmp_r), add = TRUE)
+  expect_equal(.extract_code(tmp_r, skip_pattern = "nonexistent_pkg"), "")
+
+  tmp_rmd <- tempfile(fileext = ".Rmd")
+  writeLines("```{r}\nx <- 1\n```", tmp_rmd)
+  on.exit(unlink(tmp_rmd), add = TRUE)
+  expect_equal(.extract_code(tmp_rmd, skip_pattern = "nonexistent_pkg"), "")
+
+  # 4-arg function call to trigger n > 3L AST loop
+  tmp_4arg <- tempfile(fileext = ".R")
+  writeLines("library(stats)\nfilter(1, 2, 3, 4)", tmp_4arg)
+  on.exit(unlink(tmp_4arg), add = TRUE)
+  res_4arg <- scan_usage(
+    tmp_4arg,
+    allowed_packages = "stats",
+    export_index = list(filter = "stats"),
+    origin_map = list2env(list("stats::filter" = "stats"), parent = emptyenv()),
+    quiet = TRUE
+  )
+  expect_true("stats::filter" %in% res_4arg$functions)
+})

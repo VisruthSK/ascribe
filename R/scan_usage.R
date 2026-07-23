@@ -246,10 +246,6 @@ scan_usage <- function(
     }
   }
 
-  if (ext == "r") {
-    return(paste(lines, collapse = "\n"))
-  }
-
   if (use_knitr) {
     if (!requireNamespace("knitr", quietly = TRUE)) {
       cli::cli_abort(c(
@@ -383,6 +379,24 @@ scan_usage <- function(
   file_path = NULL
 ) {
   empty <- list(pkgs = character(), keys = character(), ambiguous = character())
+  if (!nzchar(code)) {
+    return(empty)
+  }
+
+  relevant_pkgs <- unique(c(allowed_packages, names(metapackages)))
+  if (length(relevant_pkgs) > 0L) {
+    has_pkg <- FALSE
+    for (p in relevant_pkgs) {
+      if (grepl(p, code, fixed = TRUE, useBytes = TRUE)) {
+        has_pkg <- TRUE
+        break
+      }
+    }
+    if (!has_pkg) {
+      return(empty)
+    }
+  }
+
   expr <- tryCatch(
     parse(text = code, keep.source = FALSE),
     error = function(e) NULL
@@ -478,6 +492,22 @@ scan_usage <- function(
   export_names,
   metapackages
 ) {
+  make_env <- function(vec) {
+    e <- new.env(parent = emptyenv(), hash = TRUE)
+    if (length(vec)) {
+      for (x in vec) {
+        e[[x]] <- TRUE
+      }
+    }
+    e
+  }
+
+  ignore_unqual_env <- make_env(ignore_unqualified_functions)
+  allowed_pkgs_env <- make_env(allowed_packages)
+  ignore_heads_env <- make_env(ignore_heads)
+  export_names_env <- make_env(export_names)
+  use_heads_env <- make_env(use_heads)
+
   walk <- function(x, acc) {
     if (is.null(x)) {
       return(invisible(NULL))
@@ -490,11 +520,9 @@ scan_usage <- function(
       head_name <- if (is.symbol(head)) as.character(head) else NULL
       member_fun <- if (is.call(head)) .ast_member_fun(head) else NULL
 
-      # Member calls (e.g., obj$sample()) are package API methods, not
-      # language-level calls; don't suppress them via stdlib ignore lists.
       if (
         !is.null(member_fun) &&
-          !is.na(fastmatch::fmatch(member_fun, export_names))
+          exists(member_fun, envir = export_names_env, inherits = FALSE)
       ) {
         acc$unqual_funs <- c(acc$unqual_funs, member_fun)
         acc$unqual_visit_idx <- c(acc$unqual_visit_idx, acc$visit_idx)
@@ -507,7 +535,7 @@ scan_usage <- function(
           if (
             !is.null(pkg) &&
               !is.null(fun) &&
-              !is.na(fastmatch::fmatch(pkg, allowed_packages))
+              exists(pkg, envir = allowed_pkgs_env, inherits = FALSE)
           ) {
             acc$ns_pkgs <- c(acc$ns_pkgs, pkg)
             acc$ns_keys <- c(acc$ns_keys, paste0(pkg, "::", fun))
@@ -515,7 +543,8 @@ scan_usage <- function(
         } else if (head_name == "use") {
           pkg <- .ast_get_lib_pkg(x)
           if (
-            !is.null(pkg) && !is.na(fastmatch::fmatch(pkg, allowed_packages))
+            !is.null(pkg) &&
+              exists(pkg, envir = allowed_pkgs_env, inherits = FALSE)
           ) {
             acc$ns_pkgs <- c(acc$ns_pkgs, pkg)
             funs <- .ast_get_use_funs(x, use_heads)
@@ -530,7 +559,11 @@ scan_usage <- function(
         ) {
           pkg <- .ast_get_lib_pkg(x)
           if (!is.null(pkg)) {
-            is_allowed <- !is.na(fastmatch::fmatch(pkg, allowed_packages))
+            is_allowed <- exists(
+              pkg,
+              envir = allowed_pkgs_env,
+              inherits = FALSE
+            )
             is_attach <- head_name != "requireNamespace"
 
             if (is_allowed) {
@@ -554,12 +587,28 @@ scan_usage <- function(
               }
             }
           }
-        } else if (!is.na(fastmatch::fmatch(head_name, ignore_heads))) {
+        } else if (
+          exists(
+            head_name,
+            envir = ignore_heads_env,
+            inherits = FALSE
+          )
+        ) {
           # Skip language keywords, operators, and subsetting.
-        } else if (is.na(fastmatch::fmatch(head_name, export_names))) {
+        } else if (
+          !exists(
+            head_name,
+            envir = export_names_env,
+            inherits = FALSE
+          )
+        ) {
           # Ignore calls not in the export index.
         } else if (
-          is.na(fastmatch::fmatch(head_name, ignore_unqualified_functions))
+          !exists(
+            head_name,
+            envir = ignore_unqual_env,
+            inherits = FALSE
+          )
         ) {
           acc$unqual_funs <- c(acc$unqual_funs, head_name)
           acc$unqual_visit_idx <- c(acc$unqual_visit_idx, acc$visit_idx)
@@ -570,7 +619,12 @@ scan_usage <- function(
         walk(head, acc)
       }
       n <- length(x)
-      if (n >= 2L) {
+      if (n == 2L) {
+        walk(x[[2L]], acc)
+      } else if (n == 3L) {
+        walk(x[[2L]], acc)
+        walk(x[[3L]], acc)
+      } else if (n > 3L) {
         for (i in 2L:n) {
           walk(x[[i]], acc)
         }
@@ -819,24 +873,6 @@ scan_usage <- function(
   allowed_origins <- unique(meta$origin[meta$origin_allowed])
   if (length(allowed_origins) == 1L) {
     return(rep.int(allowed_origins[[1L]], length(visit_idx)))
-  }
-
-  if (length(meta$provider) == 1L) {
-    provider_rows <- attached_rows[[meta$provider]]
-    hits <- findInterval(visit_idx, attached$visit_idx[provider_rows])
-    matched <- hits > 0L
-    resolved <- rep.int("", length(visit_idx))
-    if (!any(matched)) {
-      return(resolved)
-    }
-    orig <- meta$origin[[1L]]
-    resolved_val <- if (is.na(fastmatch::fmatch(orig, allowed_packages))) {
-      meta$provider[[1L]]
-    } else {
-      orig
-    }
-    resolved[matched] <- resolved_val
-    return(resolved)
   }
 
   attached_match_idx <- do.call(
