@@ -2,7 +2,7 @@
 
 Given a character vector of package names, computes the export lists,
 inverted export index, origin map, and version snapshot needed by
-[`scan_usage()`](https://visruthsk.github.io/ascribe/reference/scan_usage.md).
+[`scan_usage()`](https://ascribe.visruth.com/reference/scan_usage.md).
 All packages must be installed.
 
 ## Usage
@@ -29,19 +29,19 @@ A named list with components:
 
   Named list mapping package names to character vectors of exported
   function names (from
-  [`collect_pkg_funs()`](https://visruthsk.github.io/ascribe/reference/collect_pkg_funs.md)).
+  [`collect_pkg_funs()`](https://ascribe.visruth.com/reference/collect_pkg_funs.md)).
 
 - export_index:
 
   Named list mapping function names to character vectors of packages
   (from
-  [`build_export_index()`](https://visruthsk.github.io/ascribe/reference/build_export_index.md)).
+  [`build_export_index()`](https://ascribe.visruth.com/reference/build_export_index.md)).
 
 - origin_map:
 
   Named character vector mapping `"pkg::fun"` keys to origin packages
   (from
-  [`build_origin_map()`](https://visruthsk.github.io/ascribe/reference/build_origin_map.md)).
+  [`build_origin_map()`](https://ascribe.visruth.com/reference/build_origin_map.md)).
 
 - pkg_versions:
 

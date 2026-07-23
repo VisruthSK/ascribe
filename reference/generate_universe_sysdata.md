@@ -44,7 +44,7 @@ generate_universe_sysdata(
 ## Value
 
 Invisibly returns the result of
-[`build_universe_data()`](https://visruthsk.github.io/ascribe/reference/build_universe_data.md).
+[`build_universe_data()`](https://ascribe.visruth.com/reference/build_universe_data.md).
 
 ## Details
 
@@ -78,6 +78,6 @@ When `include_scanner_defaults` is `TRUE`, `.stdlib_funs` and
 ``` r
 file <- tempfile(fileext = ".rda")
 generate_universe_sysdata(c("stats", "utils"), "my", file = file)
-#> ✔ Successfully generated /tmp/RtmpkEEgfc/file1a001a10c6c6.rda
+#> ✔ Successfully generated /tmp/RtmphVTjdg/file19f46dd22873.rda
 unlink(file)
 ```

@@ -10,7 +10,7 @@ demonstrates building a citation scanner targeting Stan packages
 
 ## Build the package universe
 
-[`build_universe_data()`](https://visruthsk.github.io/ascribe/reference/build_universe_data.md)
+[`build_universe_data()`](https://ascribe.visruth.com/reference/build_universe_data.md)
 extracts exported functions, R6 methods, and origin mappings for
 re-exported functions.
 
@@ -22,12 +22,12 @@ names(universe)
 ```
 
 Run
-[`build_universe_data()`](https://visruthsk.github.io/ascribe/reference/build_universe_data.md)
+[`build_universe_data()`](https://ascribe.visruth.com/reference/build_universe_data.md)
 in an environment where all target packages are installed.
 
 ## Scan source code
 
-[`scan_usage()`](https://visruthsk.github.io/ascribe/reference/scan_usage.md)
+[`scan_usage()`](https://ascribe.visruth.com/reference/scan_usage.md)
 inspects `.R`, `.Rmd`, and `.qmd` files for package attachments
 ([`library()`](https://rdrr.io/r/base/library.html),
 [`require()`](https://rdrr.io/r/base/library.html)) and function calls
@@ -69,7 +69,7 @@ unambiguously.
 
 ## Generate citations
 
-[`cite_usage()`](https://visruthsk.github.io/ascribe/reference/cite_usage.md)
+[`cite_usage()`](https://ascribe.visruth.com/reference/cite_usage.md)
 formats BibTeX entries for detected packages and functions.
 
 ``` r
@@ -83,7 +83,7 @@ and `function_citations`.
 
 ## Save scanner data in sysdata.rda
 
-[`generate_universe_sysdata()`](https://visruthsk.github.io/ascribe/reference/generate_universe_sysdata.md)
+[`generate_universe_sysdata()`](https://ascribe.visruth.com/reference/generate_universe_sysdata.md)
 precompiles universe data into `R/sysdata.rda` for downstream package
 distribution.
 

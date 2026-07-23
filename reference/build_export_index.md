@@ -2,7 +2,7 @@
 
 Given a named list mapping package names to character vectors of
 function names (as produced by
-[`collect_pkg_funs()`](https://visruthsk.github.io/ascribe/reference/collect_pkg_funs.md)),
+[`collect_pkg_funs()`](https://ascribe.visruth.com/reference/collect_pkg_funs.md)),
 creates an inverted index mapping function names to character vectors of
 packages that export them.
 

@@ -45,7 +45,7 @@ scan_usage(
 - ignore_unqualified_functions:
 
   Defaults to exports from base R packages listed in
-  [`stdlib_funs()`](https://visruthsk.github.io/ascribe/reference/internal_data.md).
+  [`stdlib_funs()`](https://ascribe.visruth.com/reference/internal_data.md).
   Character vector of function names to ignore when attributing
   (unqualified) calls. Calls like `pkg::fun()` will NOT be ignored even
   if `fun` is in `ignore_unqualified_functions`, since they are
@@ -60,7 +60,7 @@ scan_usage(
 
   Character vector of directory names to skip when scanning a directory.
   Defaults to
-  [`scan_skip_dirs()`](https://visruthsk.github.io/ascribe/reference/internal_data.md).
+  [`scan_skip_dirs()`](https://ascribe.visruth.com/reference/internal_data.md).
 
 - metapackages:
 

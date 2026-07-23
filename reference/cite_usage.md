@@ -1,7 +1,7 @@
 # Cite package and function use in a project
 
 Builds citations from
-[`scan_usage()`](https://visruthsk.github.io/ascribe/reference/scan_usage.md)
+[`scan_usage()`](https://ascribe.visruth.com/reference/scan_usage.md)
 results. Package collections supply their own citation records and
 package-citation policy.
 
@@ -23,7 +23,7 @@ cite_usage(
 - usage:
 
   Results returned by
-  [`scan_usage()`](https://visruthsk.github.io/ascribe/reference/scan_usage.md).
+  [`scan_usage()`](https://ascribe.visruth.com/reference/scan_usage.md).
 
 - package_citations:
 
@@ -61,7 +61,7 @@ path <- tempfile(fileext = ".R")
 writeLines("stats::median(1:3)", path)
 universe <- build_universe_data(c("stats", "tools"))
 usage <- scan_usage(path, universe$packages, universe$export_index, universe$origin_map)
-#> ℹ Searching /tmp/RtmpkEEgfc/file1a0064e91b8.R
+#> ℹ Searching /tmp/RtmphVTjdg/file19f43ba6fb98.R
 cite_usage(usage)
 #> @Manual{,
 #>   title = {R: A Language and Environment for Statistical Computing},

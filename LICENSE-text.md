@@ -1,4 +1,4 @@
 # License
 
     YEAR: 2026
-    COPYRIGHT HOLDER: ascribe authors
+    COPYRIGHT HOLDER: Visruth Srimath Kandali

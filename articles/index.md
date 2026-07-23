@@ -3,4 +3,4 @@
 ### All vignettes
 
 - [Build a Citation
-  Scanner](https://visruthsk.github.io/ascribe/articles/build-a-citation-scanner.md):
+  Scanner](https://ascribe.visruth.com/articles/build-a-citation-scanner.md):
