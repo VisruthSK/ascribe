@@ -27,3 +27,18 @@ universe <- build_universe_data("stats")
 usage <- scan_usage(path, universe$packages, universe$export_index, universe$origin_map)
 cite_usage(usage)
 ```
+
+## Limitations
+
+- The scanner records function calls, not function references. It
+  ignores `lapply(x, mean)` and `purrr::map(x, sd)`.
+- Its built-in Markdown parser recognizes R chunks headed with `{r}`.
+  Plain fenced blocks with an `r` info string are skipped.
+- Package attachments are tracked within each file. A setup script that
+  calls [`library()`](https://rdrr.io/r/base/library.html) does not
+  establish attachment state for another file.
+- Default package citations require the package to be installed. Supply
+  `package_citations` for packages that are unavailable locally.
+- Scanning a namespace inspects its bindings for R6 classes. Active
+  bindings can run their getters, and unusually deep generated
+  expressions can exceed R’s recursion limits.

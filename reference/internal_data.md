@@ -14,6 +14,12 @@ stdlib_funs()
 scan_skip_dirs()
 ```
 
+## Value
+
+A character vector of function names to ignore.
+
+A character vector of directory names to skip.
+
 ## Examples
 
 ``` r

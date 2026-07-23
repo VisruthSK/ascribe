@@ -53,10 +53,8 @@ scan_usage(
 
 - strict:
 
-  If `TRUE` (default), only count unqualified function calls whose
-  origin can be determined exactly from the static scan, including
-  attachment-order tie-breaks when the winner is unambiguous from the
-  file. Unresolved calls are warned about and omitted.
+  If `FALSE` (default), warn on ambiguous function calls whose origin
+  cannot be determined exactly. If `TRUE`, abort on ambiguous calls.
 
 - skip_dirs:
 

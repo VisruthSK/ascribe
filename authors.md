@@ -7,6 +7,9 @@
 
 ## Citation
 
+Source:
+[`DESCRIPTION`](https://github.com/VisruthSK/ascribe/blob/main/DESCRIPTION)
+
 Srimath Kandali V (2026). *ascribe: Static AST Scanning of R Package and
 Function Usage*. R package version 0.0.0.9000,
 <https://ascribe.visruth.com>.
