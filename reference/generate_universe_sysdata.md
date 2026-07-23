@@ -78,6 +78,6 @@ When `include_scanner_defaults` is `TRUE`, `.stdlib_funs` and
 ``` r
 file <- tempfile(fileext = ".rda")
 generate_universe_sysdata(c("stats", "utils"), "my", file = file)
-#> ✔ Successfully generated /tmp/RtmpWrcOB6/file1a116129e475.rda
+#> ✔ Successfully generated /tmp/Rtmpqsw48z/file1947271f9625.rda
 unlink(file)
 ```

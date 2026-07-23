@@ -1,4 +1,4 @@
-# ascribe: Static AST Scanning of R Package and Function Usage
+# ascribe: Static Detection and Citation of R Package and Function Usage
 
 Scans R source files for package and function use, then builds citations
 from configurable package universes. Supports .R, .Rmd, and .qmd files,
