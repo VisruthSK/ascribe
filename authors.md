@@ -8,7 +8,7 @@
 ## Citation
 
 Source:
-[`DESCRIPTION`](https://github.com/VisruthSK/ascribe/blob/main/DESCRIPTION)
+[`DESCRIPTION`](https://github.com/VisruthSK/ascribe/blob/v0.1.0/DESCRIPTION)
 
 Srimath Kandali V (2026). *ascribe: Static Detection and Citation of R
 Package and Function Usage*. R package version 0.1.0,
