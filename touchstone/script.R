@@ -100,7 +100,11 @@ for (repo in repos) {
         origin_map = universe$origin_map,
         strict = FALSE,
         quiet = TRUE
-      ),
+      )
+    )
+    benchmark_run(
+      expr_before_benchmark = !!expr_before,
+      n = n,
       loo_knitr := scan_usage(
         path = !!repo_path,
         allowed_packages = universe$packages,
