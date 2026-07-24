@@ -12,7 +12,7 @@
 #'       vectors of exported function names (from [collect_pkg_funs()]).}
 #'     \item{export_index}{Named list mapping function names to
 #'       character vectors of packages (from [build_export_index()]).}
-#'     \item{origin_map}{Named character vector mapping `"pkg::fun"` keys
+#'     \item{origin_map}{Environment mapping `"pkg::fun"` keys
 #'       to origin packages (from [build_origin_map()]).}
 #'     \item{pkg_versions}{Named list mapping package names to version
 #'       strings.}
@@ -58,7 +58,7 @@ build_universe_data <- function(packages) {
 #'   \item{`.{prefix}_pkgs`}{Character vector of package names.}
 #'   \item{`.{prefix}_exports`}{Named list of exported functions per package.}
 #'   \item{`.{prefix}_export_index`}{Inverted index: function name to packages.}
-#'   \item{`.{prefix}_origin_map`}{Named character vector: `"pkg::fun"` to origin.}
+#'   \item{`.{prefix}_origin_map`}{Environment: `"pkg::fun"` keys to origin.}
 #'   \item{`.{prefix}_pkg_versions`}{Named list of version strings.}
 #' }
 #'

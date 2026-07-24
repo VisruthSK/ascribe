@@ -88,10 +88,11 @@ resolve_origin <- function(pkg, name) {
 
   env <- environment(obj)
   origin <- if (is.null(env)) "" else environmentName(env)
+  origin <- sub("^namespace:", "", origin)
   if (!nzchar(origin)) {
     return(NA_character_)
   }
-  sub("^namespace:", "", origin)
+  origin
 }
 
 #' Build an inverted export index
@@ -127,7 +128,7 @@ build_export_index <- function(exports) {
 #'
 #' @param exports Named list. Names are package names, values are
 #'   character vectors of function names.
-#' @return Named character vector mapping `"pkg::fun"` to origin package.
+#' @return Environment mapping `"pkg::fun"` keys to origin package names.
 #' @export
 #' @examples
 #' exports <- list(
@@ -145,5 +146,5 @@ build_origin_map <- function(exports) {
   # If origin is undetermined (NA), assume it is the provider package
   origins[is.na(origins)] <- all_pkgs[is.na(origins)]
   names(origins) <- keys
-  origins
+  list2env(as.list(origins), parent = emptyenv(), hash = TRUE)
 }

@@ -14,7 +14,8 @@ scan_usage(
   skip_dirs = .scan_skip_dirs,
   metapackages = NULL,
   use_knitr = FALSE,
-  quiet = FALSE
+  quiet = FALSE,
+  resolver_index = NULL
 )
 }
 \arguments{
@@ -26,8 +27,8 @@ calls to.}
 
 \item{export_index}{Named list mapping function names to packages.}
 
-\item{origin_map}{Named character vector mapping \code{pkg::fun} keys to the
-origin package.}
+\item{origin_map}{Environment mapping \code{pkg::fun} keys to the origin package,
+as returned by \code{\link[=build_origin_map]{build_origin_map()}}.}
 
 \item{ignore_unqualified_functions}{Defaults to exports from base R packages
 listed in \code{stdlib_funs()}. Character vector of function names to ignore when
@@ -51,6 +52,10 @@ but much slower than the default in-house parser. Defaults to \code{FALSE}.}
 
 \item{quiet}{Logical. If \code{TRUE}, suppresses status messages. Defaults to
 \code{FALSE}.}
+
+\item{resolver_index}{Optional precomputed index mapping function names to
+provider packages and origins (as computed by \code{.scan_resolver_index()}).
+Defaults to \code{NULL}.}
 }
 \value{
 A list of packages, resolved functions, and ambiguous function calls.
@@ -86,7 +91,7 @@ scan_usage(
   path,
   allowed_packages = c("stats", "utils"),
   export_index = list(filter = "stats"),
-  origin_map = c("stats::filter" = "stats"),
+  origin_map = list2env(list("stats::filter" = "stats"), parent = emptyenv()),
   ignore_unqualified_functions = character(),
   quiet = TRUE
 )

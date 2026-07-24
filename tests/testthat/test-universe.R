@@ -11,7 +11,7 @@ test_that("build_universe_data builds complete scanner data structure", {
   expect_true("median" %in% data$exports$stats)
   expect_true("head" %in% data$exports$utils)
   expect_true("median" %in% names(data$export_index))
-  expect_true("stats::median" %in% names(data$origin_map))
+  expect_true(exists("stats::median", envir = data$origin_map))
   expect_named(data$pkg_versions, pkgs)
 })
 
