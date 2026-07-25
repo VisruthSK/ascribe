@@ -37,9 +37,8 @@
 #'   but much slower than the default in-house parser. Defaults to `FALSE`.
 #' @param quiet Logical. If `TRUE`, suppresses status messages. Defaults to
 #'   `FALSE`.
-#' @param resolver_index Optional precomputed index mapping function names to
-#'   provider packages and origins (as computed by `.scan_resolver_index()`).
-#'   Defaults to `NULL`.
+#' @param quiet Logical. If `TRUE`, suppresses status messages. Defaults to
+#'   `FALSE`.
 #' @return A list of packages, resolved functions, and ambiguous function calls.
 #' @export
 #' @examples
@@ -73,8 +72,7 @@ scan_usage <- function(
   skip_dirs = .scan_skip_dirs,
   metapackages = NULL,
   use_knitr = FALSE,
-  quiet = FALSE,
-  resolver_index = NULL
+  quiet = FALSE
 ) {
   if (quiet) {
     old_options <- options(cli.default_handler = \(msg) invisible(NULL))
@@ -88,9 +86,7 @@ scan_usage <- function(
   }
   walker <- .make_ast_walker(
     ignore_unqualified_functions = ignore_unqualified_functions,
-    lib_funs = .scan_lib_funs,
     allowed_packages = allowed_packages,
-    ns_ops = .scan_ns_ops,
     use_heads = .scan_use_heads,
     ignore_heads = .scan_ignore_heads,
     export_names = export_names,
@@ -128,7 +124,7 @@ scan_usage <- function(
   # Build skip_pattern once here rather than once per file inside .extract_code
   skip_pkgs <- c(allowed_packages, names(metapackages))
   u_skip_pkgs <- unique(skip_pkgs)
-  skip_pattern <- if (length(u_skip_pkgs) > 0L && length(u_skip_pkgs) <= 200L) {
+  skip_pattern <- if (length(u_skip_pkgs) > 0L) {
     escaped <- gsub("([][{}()+*^$|\\\\.?])", "\\\\\\1", u_skip_pkgs)
     paste0("\\b(", paste(escaped, collapse = "|"), ")\\b")
   } else {
@@ -145,10 +141,7 @@ scan_usage <- function(
       )
       .scan_tokens(
         code_str,
-        ignore_unqualified_functions = ignore_unqualified_functions,
         allowed_packages = allowed_packages,
-        export_index = export_index,
-        origin_map = origin_map,
         resolver_index = resolver_index,
         metapackages = metapackages,
         walker = walker,
@@ -181,35 +174,51 @@ scan_usage <- function(
   )
 }
 
-.scan_skip_regex <- function(skip_dirs) {
-  escaped <- vapply(
-    skip_dirs,
-    \(x) gsub("([][{}()+*^$|\\\\.?])", "\\\\\\1", x),
-    character(1)
-  )
-  paste0("(^|/)(?:", paste(escaped, collapse = "|"), ")(/|$)")
-}
-
 .scan_dir_files <- function(dir_path, skip_dirs) {
   dir_path <- normalizePath(dir_path, winslash = "/", mustWork = TRUE)
-  files <- list.files(
-    dir_path,
-    pattern = "\\.(R|Rmd|Qmd)$",
-    recursive = TRUE,
-    full.names = TRUE,
-    ignore.case = TRUE,
-    all.files = TRUE,
-    no.. = TRUE
-  )
-  if (!length(files)) {
-    return(character())
+  skip_set <- if (length(skip_dirs)) {
+    e <- new.env(parent = emptyenv(), hash = TRUE)
+    for (d in skip_dirs) {
+      e[[d]] <- TRUE
+    }
+    e
+  } else {
+    NULL
   }
-  files <- chartr("\\", "/", files)
-  if (length(skip_dirs)) {
-    pat <- .scan_skip_regex(skip_dirs)
-    files <- files[!grepl(pat, files, perl = TRUE)]
+
+  walk_dir <- function(current_dir) {
+    entries <- list.files(
+      current_dir,
+      full.names = TRUE,
+      all.files = TRUE,
+      no.. = TRUE
+    )
+    if (!length(entries)) {
+      return(character())
+    }
+    entries <- chartr("\\", "/", entries)
+    is_dir <- dir.exists(entries)
+
+    sub_dirs <- entries[is_dir]
+    files <- entries[!is_dir]
+
+    matching_files <- files[grepl("\\.(R|Rmd|Qmd)$", files, ignore.case = TRUE)]
+
+    if (!is.null(skip_set) && length(sub_dirs)) {
+      dir_names <- basename(sub_dirs)
+      keep_dir <- vapply(dir_names, \(d) is.null(skip_set[[d]]), logical(1))
+      sub_dirs <- sub_dirs[keep_dir]
+    }
+
+    if (length(sub_dirs)) {
+      sub_files <- unlist(lapply(sub_dirs, walk_dir), use.names = FALSE)
+      matching_files <- c(matching_files, sub_files)
+    }
+
+    matching_files
   }
-  files
+
+  walk_dir(dir_path)
 }
 
 .collect_unique <- function(hits, field) {
@@ -341,8 +350,6 @@ scan_usage <- function(
   paste(unlist(chunks[seq_len(j)], use.names = FALSE), collapse = "\n")
 }
 
-.scan_lib_funs <- c("library", "require", "requireNamespace")
-.scan_ns_ops <- c("::", ":::")
 .scan_use_heads <- c("c", "list")
 .scan_ignore_heads <- c(
   "if",
@@ -383,31 +390,12 @@ scan_usage <- function(
   "[["
 )
 
-.scan_ignore_heads_env <- (function() {
-  e <- new.env(parent = emptyenv(), hash = TRUE)
-  for (x in .scan_ignore_heads) {
-    e[[x]] <- TRUE
-  }
-  e
-})()
-
-.scan_use_heads_env <- (function() {
-  e <- new.env(parent = emptyenv(), hash = TRUE)
-  for (x in .scan_use_heads) {
-    e[[x]] <- TRUE
-  }
-  e
-})()
-
 .scan_tokens <- function(
   code,
-  ignore_unqualified_functions,
-  allowed_packages = character(),
-  export_index = list(),
-  origin_map = NULL,
-  resolver_index = NULL,
-  metapackages = NULL,
-  walker = NULL,
+  allowed_packages,
+  resolver_index,
+  metapackages,
+  walker,
   file_path = NULL
 ) {
   empty <- list(pkgs = character(), keys = character(), ambiguous = character())
@@ -457,27 +445,6 @@ scan_usage <- function(
   acc$unqual_funs <- character()
   acc$unqual_visit_idx <- integer()
 
-  export_names <- names(export_index)
-  if (is.null(export_names)) {
-    export_names <- character()
-  }
-  if (is.null(resolver_index)) {
-    resolver_index <- .scan_resolver_index(export_index, origin_map)
-  }
-
-  if (is.null(walker)) {
-    walker <- .make_ast_walker(
-      ignore_unqualified_functions = ignore_unqualified_functions,
-      lib_funs = .scan_lib_funs,
-      allowed_packages = allowed_packages,
-      ns_ops = .scan_ns_ops,
-      use_heads = .scan_use_heads,
-      ignore_heads = .scan_ignore_heads,
-      export_names = export_names,
-      metapackages = metapackages
-    )
-  }
-
   for (i in seq_along(expr)) {
     walker(expr[[i]], acc)
   }
@@ -501,11 +468,9 @@ scan_usage <- function(
   }
 
   resolved <- .resolve_candidates(
-    list(funs = acc$unqual_funs, idx = acc$unqual_visit_idx),
-    lib_data,
-    allowed_packages,
-    export_index,
-    origin_map,
+    unqual = list(funs = acc$unqual_funs, idx = acc$unqual_visit_idx),
+    lib_data = lib_data,
+    allowed_packages = allowed_packages,
     resolver_index = resolver_index
   )
 
@@ -518,9 +483,7 @@ scan_usage <- function(
 
 .make_ast_walker <- function(
   ignore_unqualified_functions,
-  lib_funs,
   allowed_packages,
-  ns_ops,
   use_heads,
   ignore_heads,
   export_names,
@@ -529,13 +492,6 @@ scan_usage <- function(
   make_env <- function(vec) {
     if (!length(vec)) {
       return(new.env(parent = emptyenv(), hash = TRUE))
-    }
-    if (length(vec) < 100L) {
-      e <- new.env(parent = emptyenv(), hash = TRUE)
-      for (x in vec) {
-        e[[x]] <- TRUE
-      }
-      return(e)
     }
     vals <- rep.int(list(TRUE), length(vec))
     names(vals) <- vec
@@ -546,7 +502,6 @@ scan_usage <- function(
   allowed_pkgs_env <- make_env(allowed_packages)
   ignore_heads_env <- make_env(ignore_heads)
   export_names_env <- make_env(export_names)
-  use_heads_env <- make_env(use_heads)
 
   walk <- function(x, acc) {
     if (is.null(x)) {
@@ -674,6 +629,10 @@ scan_usage <- function(
 }
 
 .ast_member_fun <- function(head) {
+  if (!is.call(head) || !length(head)) {
+    return(NULL)
+  }
+
   op <- head[[1L]]
   if (!is.symbol(op)) {
     return(NULL)
@@ -795,8 +754,8 @@ scan_usage <- function(
 }
 
 .scan_resolver_index <- function(
-  export_index = list(),
-  origin_map = NULL
+  export_index,
+  origin_map
 ) {
   funs <- names(export_index)
   if (is.null(funs) || length(funs) == 0L) {
@@ -931,17 +890,12 @@ scan_usage <- function(
 .resolve_candidates <- function(
   unqual,
   lib_data,
-  allowed_packages = character(),
-  export_index = list(),
-  origin_map = NULL,
-  resolver_index = NULL
+  allowed_packages,
+  resolver_index
 ) {
   empty <- list(pkgs = character(), keys = character(), ambiguous = character())
   if (!length(unqual$funs) || !length(allowed_packages)) {
     return(empty)
-  }
-  if (is.null(resolver_index)) {
-    resolver_index <- .scan_resolver_index(export_index, origin_map)
   }
   if (is.null(lib_data) || !any(lib_data$is_attach)) {
     return(empty)

@@ -364,9 +364,6 @@ test_that("scan_usage returns empty results when allowed_packages is empty or no
 })
 
 test_that("full coverage tests for all scan_usage.R branches", {
-  # .scan_skip_regex with empty skip_dirs
-  expect_equal(.scan_skip_regex(character(0)), "(^|/)(?:)(/|$)")
-
   # .scan_dir_files with non-code directory
   nocode_only_dir <- tempfile("nocode_only_")
   dir.create(nocode_only_dir)
@@ -417,10 +414,21 @@ test_that("full coverage tests for all scan_usage.R branches", {
   expect_true(nzchar(.extract_markdown_code(md_with_inner_fence)))
 
   # .scan_tokens with syntax error when file_path is NULL/empty
+  walker_stub <- .make_ast_walker(
+    ignore_unqualified_functions = character(),
+    allowed_packages = character(),
+    use_heads = .scan_use_heads,
+    ignore_heads = .scan_ignore_heads,
+    export_names = character(),
+    metapackages = NULL
+  )
   expect_warning(
     hits <- .scan_tokens(
       "invalid syntax {{{",
-      ignore_unqualified_functions = character(),
+      allowed_packages = character(),
+      resolver_index = list(),
+      metapackages = NULL,
+      walker = walker_stub,
       file_path = NULL
     ),
     "Failed to parse"
@@ -430,34 +438,45 @@ test_that("full coverage tests for all scan_usage.R branches", {
   expect_warning(
     hits_empty_path <- .scan_tokens(
       "invalid syntax {{{",
-      ignore_unqualified_functions = character(),
+      allowed_packages = character(),
+      resolver_index = list(),
+      metapackages = NULL,
+      walker = walker_stub,
       file_path = ""
     ),
     "Failed to parse"
   )
   expect_equal(hits_empty_path$pkgs, character())
 
-  # .scan_tokens when export_index names is NULL / empty or resolver_index is NULL
   hits_no_exports <- .scan_tokens(
     "1 + 1",
-    ignore_unqualified_functions = character(),
-    export_index = list(),
-    resolver_index = NULL
+    allowed_packages = character(),
+    resolver_index = list(),
+    metapackages = NULL,
+    walker = walker_stub
   )
   expect_equal(hits_no_exports$pkgs, character())
 
-  hits_null_resolver <- .scan_tokens(
-    "library(stats)\nfilter(1)",
+  res_idx <- .scan_resolver_index(
+    list(filter = "stats"),
+    list2env(list("stats::filter" = "stats"), parent = emptyenv())
+  )
+  walker_stats <- .make_ast_walker(
     ignore_unqualified_functions = character(),
     allowed_packages = "stats",
-    export_index = list(filter = "stats"),
-    origin_map = list2env(
-      list("stats::filter" = "stats"),
-      parent = emptyenv()
-    ),
-    resolver_index = NULL
+    use_heads = .scan_use_heads,
+    ignore_heads = .scan_ignore_heads,
+    export_names = "filter",
+    metapackages = NULL
   )
-  expect_true("stats" %in% hits_null_resolver$pkgs)
+  hits_with_resolver <- .scan_tokens(
+    "library(stats)\nfilter(1)",
+    allowed_packages = "stats",
+    resolver_index = res_idx,
+    metapackages = NULL,
+    walker = walker_stats
+  )
+  expect_true("stats" %in% hits_with_resolver$pkgs)
 
   # .make_ast_walker edge cases (replaced .ast_walk after closure refactor)
   ignore <- ascribe::stdlib_funs()
@@ -477,9 +496,7 @@ test_that("full coverage tests for all scan_usage.R branches", {
 
   walk_empty <- .make_ast_walker(
     ignore_unqualified_functions = ignore,
-    lib_funs = .scan_lib_funs,
     allowed_packages = "stats",
-    ns_ops = .scan_ns_ops,
     use_heads = .scan_use_heads,
     ignore_heads = .scan_ignore_heads,
     export_names = character(),
@@ -487,9 +504,7 @@ test_that("full coverage tests for all scan_usage.R branches", {
   )
   walk_median <- .make_ast_walker(
     ignore_unqualified_functions = ignore,
-    lib_funs = .scan_lib_funs,
     allowed_packages = "stats",
-    ns_ops = .scan_ns_ops,
     use_heads = .scan_use_heads,
     ignore_heads = .scan_ignore_heads,
     export_names = "median",
@@ -510,6 +525,7 @@ test_that("full coverage tests for all scan_usage.R branches", {
   expect_equal(.ast_member_fun(quote((1 + 1)$foo)), "foo")
   expect_equal(.ast_member_fun(quote((obj$member))), "member")
   expect_null(.ast_member_fun(as.call(list(123))))
+  expect_null(.ast_member_fun(quote((mean))))
 
   # .ast_get_lib_pkg with named arguments (package = ..., pkg = ...)
   expect_equal(
@@ -620,8 +636,7 @@ test_that("full coverage tests for all scan_usage.R branches", {
       list(funs = "foo", idx = 1L),
       NULL,
       "pkgA",
-      list(foo = "pkgA"),
-      c("pkgA::foo" = "pkgA")
+      .scan_resolver_index(list(foo = "pkgA"), NULL)
     )$pkgs,
     character()
   )
@@ -630,8 +645,7 @@ test_that("full coverage tests for all scan_usage.R branches", {
       list(funs = character(), idx = integer()),
       NULL,
       "pkgA",
-      list(),
-      character()
+      list()
     )$pkgs,
     character()
   )
@@ -645,8 +659,7 @@ test_that("full coverage tests for all scan_usage.R branches", {
         stringsAsFactors = FALSE
       ),
       "pkgA",
-      list(),
-      character()
+      list()
     )$pkgs,
     character()
   )
@@ -669,8 +682,7 @@ test_that("full coverage tests for all scan_usage.R branches", {
     unqual_data,
     lib_df,
     allowed_packages = c("pkgA", "pkgB"),
-    export_index = export_idx,
-    origin_map = origin_map
+    resolver_index = .scan_resolver_index(export_idx, origin_map)
   )
   expect_equal(cand_res$pkgs, "pkgB")
 
@@ -708,24 +720,23 @@ test_that("full coverage tests for all scan_usage.R branches", {
 test_that(".scan_tokens accepts a precomputed AST walker", {
   walker <- .make_ast_walker(
     ignore_unqualified_functions = character(),
-    lib_funs = .scan_lib_funs,
     allowed_packages = "stats",
-    ns_ops = .scan_ns_ops,
     use_heads = .scan_use_heads,
     ignore_heads = .scan_ignore_heads,
     export_names = "median",
     metapackages = NULL
   )
 
+  res_idx <- .scan_resolver_index(
+    list(median = "stats"),
+    list2env(list("stats::median" = "stats"), parent = emptyenv())
+  )
+
   hits <- .scan_tokens(
     "library(stats)\nmedian(1:5)",
-    ignore_unqualified_functions = character(),
     allowed_packages = "stats",
-    export_index = list(median = "stats"),
-    origin_map = list2env(
-      list("stats::median" = "stats"),
-      parent = emptyenv()
-    ),
+    resolver_index = res_idx,
+    metapackages = NULL,
     walker = walker
   )
 
@@ -766,6 +777,12 @@ test_that("full coverage for .scan_dir_files skip_dirs and .extract_code skip_pa
   expect_false(any(grepl("skipme", files)))
   expect_true(any(grepl("keepme", files)))
 
+  ancestor_skip_dir <- file.path(tmp_dir, "skipme", "project")
+  dir.create(ancestor_skip_dir, recursive = TRUE)
+  writeLines("library(stats)", file.path(ancestor_skip_dir, "proj_file.R"))
+  files_ancestor <- .scan_dir_files(ancestor_skip_dir, skip_dirs = "skipme")
+  expect_length(files_ancestor, 1L)
+
   # .extract_code skip_pattern no match
   tmp_r <- tempfile(fileext = ".R")
   writeLines("x <- 1", tmp_r)
@@ -793,8 +810,10 @@ test_that("full coverage for .scan_dir_files skip_dirs and .extract_code skip_pa
   # .scan_tokens early return when code contains no allowed package
   tokens_no_pkg <- .scan_tokens(
     "x <- 1 + 2",
-    ignore_unqualified_functions = character(0),
-    allowed_packages = "allowedPkg"
+    allowed_packages = "allowedPkg",
+    resolver_index = list(),
+    metapackages = NULL,
+    walker = walker_stub
   )
   expect_equal(tokens_no_pkg$pkgs, character(0))
 })
