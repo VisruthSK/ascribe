@@ -245,7 +245,6 @@ scan_usage <- function(
 
 .extract_code <- function(
   file,
-  skip_pattern = NULL,
   skip_patterns = NULL,
   use_knitr = FALSE
 ) {
@@ -263,17 +262,9 @@ scan_usage <- function(
   lines <- readLines(file, warn = FALSE)
   code_raw <- paste(lines, collapse = "\n")
 
-  pats <- if (!is.null(skip_patterns)) {
-    skip_patterns
-  } else if (!is.null(skip_pattern)) {
-    skip_pattern
-  } else {
-    NULL
-  }
-
-  if (!is.null(pats)) {
+  if (!is.null(skip_patterns)) {
     matched <- FALSE
-    for (pat in pats) {
+    for (pat in skip_patterns) {
       if (grepl(pat, code_raw, perl = TRUE, useBytes = TRUE)) {
         matched <- TRUE
         break
@@ -418,7 +409,7 @@ scan_usage <- function(
   resolver_index,
   metapackages,
   walker,
-  file_path = NULL
+  file_path
 ) {
   empty <- list(pkgs = character(), keys = character(), ambiguous = character())
   if (!nzchar(code)) {
@@ -444,8 +435,12 @@ scan_usage <- function(
     error = function(e) NULL
   )
   if (is.null(expr)) {
-    path_label <- if (!is.null(file_path) && nzchar(file_path)) {
-      file_path
+    path_label <- if (
+      length(file_path) > 0L &&
+        !is.null(file_path[[1L]]) &&
+        nzchar(file_path[[1L]])
+    ) {
+      file_path[[1L]]
     } else {
       "<unknown file>"
     }
@@ -790,13 +785,7 @@ scan_usage <- function(
   res <- vector("list", n_funs)
 
   get_map_val <- function(key) {
-    if (is.environment(origin_map)) {
-      get0(key, envir = origin_map, ifnotfound = NULL)
-    } else if (is.list(origin_map) && !is.null(names(origin_map))) {
-      origin_map[[key]]
-    } else {
-      NULL
-    }
+    get0(key, envir = origin_map, ifnotfound = NULL)
   }
 
   # Single provider functions (>95% of cases)

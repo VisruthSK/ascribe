@@ -13,23 +13,29 @@ test_that("cite_usage builds citations from a package universe", {
   )
   citations <- cite_usage(
     usage,
-    package_citations = list(
-      stats = utils::bibentry(
-        bibtype = "Manual",
-        key = "stats-package",
-        title = "Stats package",
-        author = "A",
-        year = "2026"
-      )
+    package_citations = list2env(
+      list(
+        stats = utils::bibentry(
+          bibtype = "Manual",
+          key = "stats-package",
+          title = "Stats package",
+          author = "A",
+          year = "2026"
+        )
+      ),
+      parent = emptyenv()
     ),
-    function_citations = list(
-      "stats::median" = utils::bibentry(
-        bibtype = "Manual",
-        key = "stats-median",
-        title = "Median",
-        author = "B",
-        year = "2026"
-      )
+    function_citations = list2env(
+      list(
+        "stats::median" = utils::bibentry(
+          bibtype = "Manual",
+          key = "stats-median",
+          title = "Median",
+          author = "B",
+          year = "2026"
+        )
+      ),
+      parent = emptyenv()
     ),
     package_citation = function(...) fail("Unexpected package citation lookup"),
     format = "bibentry"
@@ -42,7 +48,10 @@ test_that("cite_usage builds citations from a package universe", {
 
   bibtex <- cite_usage(
     usage,
-    package_citations = list(stats = utils::citation("stats")),
+    package_citations = list2env(
+      list(stats = utils::citation("stats")),
+      parent = emptyenv()
+    ),
     format = "bibtex"
   )
   expect_type(bibtex, "character")
@@ -59,7 +68,7 @@ test_that("cite_usage can return BibTeX and report no citations", {
         path,
         "stats",
         list(),
-        character()
+        new.env(parent = emptyenv())
       ),
       format = "bibtex"
     ),
@@ -123,7 +132,7 @@ test_that("cite_usage uses custom base citation override when base is not in pac
       list(packages = "stats", functions = character()),
       class = "scan_usage"
     ),
-    package_citations = list(base = custom_base),
+    package_citations = list2env(list(base = custom_base), parent = emptyenv()),
     format = "bibentry"
   )
   bibtex <- utils::toBibtex(citations)
@@ -191,8 +200,8 @@ test_that("cite_usage handles environment-based citations and fallback branches"
   expect_identical(
     cite_usage(
       no_usage,
-      package_citations = list("unnamed"),
-      function_citations = list("unnamed"),
+      package_citations = new.env(parent = emptyenv()),
+      function_citations = new.env(parent = emptyenv()),
       format = "bibentry"
     ),
     character()
