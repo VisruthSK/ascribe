@@ -17,9 +17,14 @@
 #' @export
 #' @examples
 #' path <- tempfile(fileext = ".R")
-#' writeLines("stats::median(1:3)", path)
-#' universe <- build_universe_data(c("stats", "tools"))
-#' usage <- scan_usage(path, universe$packages, universe$export_index, universe$origin_map)
+#' writeLines("cli::cli_alert_info('hi'); fastmatch::fmatch(1, 1:5)", path)
+#' universe <- build_universe_data(c("cli", "fastmatch"))
+#' usage <- scan_usage(
+#'   path,
+#'   universe$packages,
+#'   universe$export_index,
+#'   universe$origin_map
+#' )
 #' cite_usage(usage)
 #' unlink(path)
 cite_usage <- function(
@@ -37,17 +42,36 @@ cite_usage <- function(
 
   entries <- c(
     lapply(unique(c(pkgs, "base")), \(pkg) {
-      entry <- package_citations[[pkg]]
+      entry <- if (is.environment(package_citations)) {
+        get0(pkg, envir = package_citations, ifnotfound = NULL)
+      } else if (
+        is.list(package_citations) && !is.null(names(package_citations))
+      ) {
+        package_citations[[pkg]]
+      } else {
+        NULL
+      }
       if (is.null(entry)) {
         if (pkg == "base") utils::citation("base") else package_citation(pkg)
       } else {
         entry
       }
     }),
-    lapply(usage$functions, \(fun) function_citations[[fun]])
+    lapply(usage$functions, \(fun) {
+      if (is.environment(function_citations)) {
+        get0(fun, envir = function_citations, ifnotfound = NULL)
+      } else if (
+        is.list(function_citations) && !is.null(names(function_citations))
+      ) {
+        function_citations[[fun]]
+      } else {
+        NULL
+      }
+    })
   ) |>
     Filter(Negate(is.null), x = _) |>
-    do.call(c, args = _)
+    do.call(c, args = _) |>
+    unique()
 
   if (match.arg(format) == "bibentry") entries else utils::toBibtex(entries)
 }

@@ -91,7 +91,23 @@ test_that("cite_usage does not duplicate base citation when base is in packages"
     ),
     format = "bibentry"
   )
-  expect_length(citations, 2L)
+  expect_length(citations, 1L)
+})
+
+test_that("cite_usage deduplicates citations for scanned usage", {
+  path <- tempfile(fileext = ".R")
+  on.exit(unlink(path), add = TRUE)
+  writeLines("stats::median(1:3)", path)
+
+  universe <- build_universe_data(c("stats", "tools"))
+  usage <- scan_usage(
+    path,
+    universe$packages,
+    universe$export_index,
+    universe$origin_map
+  )
+  citations <- cite_usage(usage, format = "bibentry")
+  expect_length(citations, 1L)
 })
 
 test_that("cite_usage uses custom base citation override when base is not in packages", {
@@ -112,4 +128,73 @@ test_that("cite_usage uses custom base citation override when base is not in pac
   )
   bibtex <- utils::toBibtex(citations)
   expect_true(any(grepl("Custom Base", bibtex, fixed = TRUE)))
+})
+
+test_that("cite_usage handles environment-based citations and fallback branches", {
+  pkg_env <- list2env(
+    list(
+      stats = utils::bibentry(
+        bibtype = "Manual",
+        key = "stats-env",
+        title = "Env Stats",
+        author = "A",
+        year = "2026"
+      ),
+      base = utils::bibentry(
+        bibtype = "Manual",
+        key = "base-env",
+        title = "Env Base",
+        author = "A",
+        year = "2026"
+      )
+    ),
+    parent = emptyenv()
+  )
+  fun_env <- list2env(
+    list(
+      "stats::median" = utils::bibentry(
+        bibtype = "Manual",
+        key = "median-env",
+        title = "Env Median",
+        author = "B",
+        year = "2026"
+      )
+    ),
+    parent = emptyenv()
+  )
+  usage <- structure(
+    list(packages = "stats", functions = "stats::median"),
+    class = "scan_usage"
+  )
+  cits <- cite_usage(
+    usage,
+    package_citations = pkg_env,
+    function_citations = fun_env,
+    format = "bibentry"
+  )
+  expect_length(cits, 3L)
+
+  cits_bibtex <- cite_usage(
+    usage,
+    package_citations = pkg_env,
+    function_citations = fun_env,
+    format = "bibtex"
+  )
+  expect_type(cits_bibtex, "character")
+  expect_true(any(grepl("Env Stats", cits_bibtex, fixed = TRUE)))
+
+  # Empty usage or NULL package/function citation branches
+  no_usage <- structure(
+    list(packages = character(), functions = character()),
+    class = "scan_usage"
+  )
+  expect_identical(
+    cite_usage(
+      no_usage,
+      package_citations = list("unnamed"),
+      function_citations = list("unnamed"),
+      format = "bibentry"
+    ),
+    character()
+  )
 })

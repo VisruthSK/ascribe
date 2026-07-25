@@ -28,6 +28,7 @@ test_that("resolve_origin identifies origin of re-exported functions and non-fun
   # Non-function or non-existent returns NA
   expect_true(is.na(resolve_origin("stats", "non_existent_function_12345")))
   expect_true(is.na(resolve_origin("datasets", "iris"))) # dataset, not function
+  expect_true(is.na(resolve_origin("nonexistent_pkg_xyz_999", "foo")))
 })
 
 test_that("build_export_index creates inverted mapping", {
@@ -43,9 +44,13 @@ test_that("build_export_index creates inverted mapping", {
 
 test_that("build_origin_map creates pkg::fun keys mapping to origin", {
   exports <- list(
-    stats = c("median", "filter")
+    stats = c("median", "filter"),
+    nonexistent = "foo",
+    datasets = "iris"
   )
   omap <- build_origin_map(exports)
   expect_equal(omap[["stats::median"]], "stats")
   expect_equal(omap[["stats::filter"]], "stats")
+  expect_equal(omap[["nonexistent::foo"]], "nonexistent")
+  expect_equal(omap[["datasets::iris"]], "datasets")
 })

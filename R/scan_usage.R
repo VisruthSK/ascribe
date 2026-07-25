@@ -789,6 +789,16 @@ scan_usage <- function(
   has_map <- !is.null(origin_map) && length(origin_map) > 0L
   res <- vector("list", n_funs)
 
+  get_map_val <- function(key) {
+    if (is.environment(origin_map)) {
+      get0(key, envir = origin_map, ifnotfound = NULL)
+    } else if (is.list(origin_map) && !is.null(names(origin_map))) {
+      origin_map[[key]]
+    } else {
+      NULL
+    }
+  }
+
   # Single provider functions (>95% of cases)
   single_idx <- which(lens == 1L)
   if (length(single_idx) > 0L) {
@@ -799,7 +809,7 @@ scan_usage <- function(
       for (k in seq_along(single_idx)) {
         i <- single_idx[[k]]
         p <- s_provs[[k]]
-        v <- origin_map[[s_keys[[k]]]]
+        v <- get_map_val(s_keys[[k]])
         orig <- if (is.null(v) || !nzchar(v)) p else v
         res[[i]] <- list(provider = p, origin = orig)
       }
@@ -822,7 +832,7 @@ scan_usage <- function(
       origins <- character(n)
       for (j in seq_len(n)) {
         p <- providers[[j]]
-        v <- if (has_map) origin_map[[paste0(p, "::", fun)]] else NULL
+        v <- if (has_map) get_map_val(paste0(p, "::", fun)) else NULL
         origins[[j]] <- if (is.null(v) || !nzchar(v)) p else v
       }
       res[[i]] <- list(provider = providers, origin = origins)

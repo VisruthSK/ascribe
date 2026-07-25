@@ -10,14 +10,12 @@
 #' collect_pkg_funs("stats")
 collect_pkg_funs <- function(pkg) {
   export_names <- getNamespaceExports(pkg)
+  ns <- asNamespace(pkg)
 
   exported_funs <- export_names |>
     Filter(
       \(x) {
-        is.function(tryCatch(
-          getExportedValue(pkg, x),
-          error = function(e) NULL
-        ))
+        is.function(get0(x, envir = ns, inherits = FALSE))
       },
       x = _
     )
@@ -42,7 +40,7 @@ collect_r6_methods <- function(pkg, export_names) {
   exported_r6 <- export_names |>
     Filter(
       \(name) {
-        obj <- tryCatch(getExportedValue(pkg, name), error = function(e) NULL)
+        obj <- get0(name, envir = ns, inherits = FALSE)
         inherits(obj, "R6ClassGenerator")
       },
       x = _
@@ -51,18 +49,15 @@ collect_r6_methods <- function(pkg, export_names) {
   namespace_r6 <- ls(ns, all.names = TRUE) |>
     Filter(
       \(name) {
-        obj <- tryCatch(
-          get(name, envir = ns, inherits = FALSE),
-          error = function(e) NULL
-        )
+        obj <- get0(name, envir = ns, inherits = FALSE)
         inherits(obj, "R6ClassGenerator")
       },
       x = _
     )
 
   unique(c(exported_r6, namespace_r6)) |>
-    lapply(\(class_name) get(class_name, envir = ns, inherits = FALSE)) |>
-    lapply(\(gen) names(gen$public_methods)) |>
+    lapply(\(class_name) get0(class_name, envir = ns, inherits = FALSE)) |>
+    lapply(\(gen) if (!is.null(gen)) names(gen$public_methods)) |>
     unlist(use.names = FALSE) |>
     as.character() |>
     (\(methods) methods[!is.na(methods) & nzchar(methods)])() |>
@@ -81,7 +76,11 @@ collect_r6_methods <- function(pkg, export_names) {
 #' @examples
 #' resolve_origin("stats", "median")
 resolve_origin <- function(pkg, name) {
-  obj <- tryCatch(getExportedValue(pkg, name), error = function(e) NULL)
+  ns <- tryCatch(asNamespace(pkg), error = function(e) NULL)
+  if (is.null(ns)) {
+    return(NA_character_)
+  }
+  obj <- get0(name, envir = ns, inherits = FALSE)
   if (!is.function(obj)) {
     return(NA_character_)
   }
@@ -116,7 +115,7 @@ resolve_origin <- function(pkg, name) {
 build_export_index <- function(exports) {
   all_funs <- unlist(exports, use.names = FALSE)
   all_pkgs <- rep(names(exports), lengths(exports))
-  split(all_pkgs, all_funs)
+  split(all_pkgs, factor(all_funs, levels = unique(all_funs)))
 }
 
 #' Build an origin map for package functions
@@ -141,7 +140,31 @@ build_origin_map <- function(exports) {
   all_pkgs <- rep(names(exports), lengths(exports))
   keys <- paste0(all_pkgs, "::", all_funs)
 
-  origins <- mapply(resolve_origin, all_pkgs, all_funs, USE.NAMES = FALSE)
+  u_pkgs <- unique(all_pkgs)
+  ns_list <- stats::setNames(
+    lapply(u_pkgs, \(p) tryCatch(asNamespace(p), error = function(e) NULL)),
+    u_pkgs
+  )
+
+  resolve_origin_fast <- function(pkg, name) {
+    ns <- ns_list[[pkg]]
+    if (is.null(ns)) {
+      return(NA_character_)
+    }
+    obj <- get0(name, envir = ns, inherits = FALSE)
+    if (!is.function(obj)) {
+      return(NA_character_)
+    }
+    env <- environment(obj)
+    origin <- if (is.null(env)) "" else environmentName(env)
+    origin <- sub("^namespace:", "", origin)
+    if (!nzchar(origin)) {
+      return(NA_character_)
+    }
+    origin
+  }
+
+  origins <- mapply(resolve_origin_fast, all_pkgs, all_funs, USE.NAMES = FALSE)
 
   # If origin is undetermined (NA), assume it is the provider package
   origins[is.na(origins)] <- all_pkgs[is.na(origins)]

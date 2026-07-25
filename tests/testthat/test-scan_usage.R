@@ -38,6 +38,25 @@ test_that("scan_usage detects library attachments and namespaced calls", {
   expect_true("stats::filter" %in% res$functions)
   expect_true("utils::head" %in% res$functions)
   expect_equal(res$ambiguous, character())
+
+  # Test list-based and non-env origin_map branches
+  res_list <- scan_usage(
+    path = tmp,
+    allowed_packages = c("stats", "utils"),
+    export_index = list(filter = "stats", head = "utils"),
+    origin_map = list("stats::filter" = "stats", "utils::head" = "utils"),
+    ignore_unqualified_functions = character()
+  )
+  expect_true("stats::filter" %in% res_list$functions)
+
+  res_other <- scan_usage(
+    path = tmp,
+    allowed_packages = c("stats", "utils"),
+    export_index = list(filter = "stats", head = "utils"),
+    origin_map = 123L,
+    ignore_unqualified_functions = character()
+  )
+  expect_true("stats::filter" %in% res_other$functions)
 })
 
 test_that("scan_usage parses Rmd and Qmd code chunks natively", {

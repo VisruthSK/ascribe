@@ -39,9 +39,14 @@ their own citation records and package-citation policy.
 }
 \examples{
 path <- tempfile(fileext = ".R")
-writeLines("stats::median(1:3)", path)
-universe <- build_universe_data(c("stats", "tools"))
-usage <- scan_usage(path, universe$packages, universe$export_index, universe$origin_map)
+writeLines("cli::cli_alert_info('hi'); fastmatch::fmatch(1, 1:5)", path)
+universe <- build_universe_data(c("cli", "fastmatch"))
+usage <- scan_usage(
+  path,
+  universe$packages,
+  universe$export_index,
+  universe$origin_map
+)
 cite_usage(usage)
 unlink(path)
 }
