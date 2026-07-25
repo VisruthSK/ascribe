@@ -13,8 +13,7 @@ scan_usage(
   strict = FALSE,
   skip_dirs = .scan_skip_dirs,
   metapackages = NULL,
-  use_knitr = FALSE,
-  quiet = FALSE
+  use_knitr = FALSE
 )
 }
 \arguments{
@@ -48,9 +47,6 @@ Defaults to \code{NULL}.}
 \item{use_knitr}{Logical. If \code{TRUE}, parse \code{.Rmd} and \code{.qmd} files with
 \code{knitr::purl()}. This is more accurate for knitr/quarto chunk handling
 but much slower than the default in-house parser. Defaults to \code{FALSE}.}
-
-\item{quiet}{Logical. If \code{TRUE}, suppresses status messages. Defaults to
-\code{FALSE}.}
 }
 \value{
 A list of packages, resolved functions, and ambiguous function calls.
@@ -87,8 +83,7 @@ scan_usage(
   allowed_packages = c("stats", "utils"),
   export_index = list(filter = "stats"),
   origin_map = list2env(list("stats::filter" = "stats"), parent = emptyenv()),
-  ignore_unqualified_functions = character(),
-  quiet = TRUE
+  ignore_unqualified_functions = character()
 )
 unlink(path)
 }

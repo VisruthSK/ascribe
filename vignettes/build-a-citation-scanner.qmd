@@ -56,8 +56,7 @@ usage <- scan_usage(
   allowed_packages = universe$packages,
   export_index = universe$export_index,
   origin_map = universe$origin_map,
-  strict = TRUE,
-  quiet = TRUE
+  strict = TRUE
 )
 
 usage

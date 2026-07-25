@@ -61,13 +61,12 @@ run_suite <- function(use_knitr = FALSE, iterations = 15) {
   for (repo in repos) {
     path <- repo_paths[[repo]]
     bm <- bench::mark(
-      main = main_scan(
+      target = main_scan(
         path = path,
         allowed_packages = universe$packages,
         export_index = universe$export_index,
         origin_map = universe$origin_map,
         strict = FALSE,
-        quiet = TRUE,
         use_knitr = use_knitr
       ),
       current = ascribe::scan_usage(
@@ -76,7 +75,6 @@ run_suite <- function(use_knitr = FALSE, iterations = 15) {
         export_index = universe$export_index,
         origin_map = universe$origin_map,
         strict = FALSE,
-        quiet = TRUE,
         use_knitr = use_knitr
       ),
       iterations = iterations,

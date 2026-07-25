@@ -35,10 +35,6 @@
 #' @param use_knitr Logical. If `TRUE`, parse `.Rmd` and `.qmd` files with
 #'   `knitr::purl()`. This is more accurate for knitr/quarto chunk handling
 #'   but much slower than the default in-house parser. Defaults to `FALSE`.
-#' @param quiet Logical. If `TRUE`, suppresses status messages. Defaults to
-#'   `FALSE`.
-#' @param quiet Logical. If `TRUE`, suppresses status messages. Defaults to
-#'   `FALSE`.
 #' @return A list of packages, resolved functions, and ambiguous function calls.
 #' @export
 #' @examples
@@ -58,8 +54,7 @@
 #'   allowed_packages = c("stats", "utils"),
 #'   export_index = list(filter = "stats"),
 #'   origin_map = list2env(list("stats::filter" = "stats"), parent = emptyenv()),
-#'   ignore_unqualified_functions = character(),
-#'   quiet = TRUE
+#'   ignore_unqualified_functions = character()
 #' )
 #' unlink(path)
 scan_usage <- function(
@@ -71,13 +66,8 @@ scan_usage <- function(
   strict = FALSE,
   skip_dirs = .scan_skip_dirs,
   metapackages = NULL,
-  use_knitr = FALSE,
-  quiet = FALSE
+  use_knitr = FALSE
 ) {
-  if (quiet) {
-    old_options <- options(cli.default_handler = \(msg) invisible(NULL))
-    on.exit(options(old_options), add = TRUE)
-  }
   resolver_index <- .scan_resolver_index(export_index, origin_map)
   metapackages <- .normalize_metapackages(metapackages, allowed_packages)
   export_names <- names(export_index)
@@ -121,12 +111,28 @@ scan_usage <- function(
     ))
   }
 
-  # Build skip_pattern once here rather than once per file inside .extract_code
+  # Build chunked skip_patterns once here rather than once per file inside .extract_code
   skip_pkgs <- c(allowed_packages, names(metapackages))
   u_skip_pkgs <- unique(skip_pkgs)
-  skip_pattern <- if (length(u_skip_pkgs) > 0L) {
-    escaped <- gsub("([][{}()+*^$|\\\\.?])", "\\\\\\1", u_skip_pkgs)
-    paste0("\\b(", paste(escaped, collapse = "|"), ")\\b")
+  skip_patterns <- if (length(u_skip_pkgs) > 0L) {
+    chunk_size <- 200L
+    n_chunks <- ceiling(length(u_skip_pkgs) / chunk_size)
+    chunks <- split(
+      u_skip_pkgs,
+      rep(
+        seq_len(n_chunks),
+        each = chunk_size,
+        length.out = length(u_skip_pkgs)
+      )
+    )
+    vapply(
+      chunks,
+      \(chk) {
+        escaped <- gsub("([][{}()+*^$|\\\\.?])", "\\\\\\1", chk)
+        paste0("\\b(", paste(escaped, collapse = "|"), ")\\b")
+      },
+      character(1)
+    )
   } else {
     NULL
   }
@@ -136,7 +142,7 @@ scan_usage <- function(
     \(file) {
       code_str <- .extract_code(
         file,
-        skip_pattern = skip_pattern,
+        skip_patterns = skip_patterns,
         use_knitr = use_knitr
       )
       .scan_tokens(
@@ -176,25 +182,21 @@ scan_usage <- function(
 
 .scan_dir_files <- function(dir_path, skip_dirs) {
   dir_path <- normalizePath(dir_path, winslash = "/", mustWork = TRUE)
-  skip_set <- if (length(skip_dirs)) {
-    e <- new.env(parent = emptyenv(), hash = TRUE)
-    for (d in skip_dirs) {
-      e[[d]] <- TRUE
-    }
-    e
-  } else {
-    NULL
-  }
+  dirs_to_visit <- dir_path
+  matching_files <- character()
 
-  walk_dir <- function(current_dir) {
+  while (length(dirs_to_visit) > 0L) {
+    curr <- dirs_to_visit[[1L]]
+    dirs_to_visit <- dirs_to_visit[-1L]
+
     entries <- list.files(
-      current_dir,
+      curr,
       full.names = TRUE,
       all.files = TRUE,
       no.. = TRUE
     )
     if (!length(entries)) {
-      return(character())
+      next
     }
     entries <- chartr("\\", "/", entries)
     is_dir <- dir.exists(entries)
@@ -202,23 +204,24 @@ scan_usage <- function(
     sub_dirs <- entries[is_dir]
     files <- entries[!is_dir]
 
-    matching_files <- files[grepl("\\.(R|Rmd|Qmd)$", files, ignore.case = TRUE)]
-
-    if (!is.null(skip_set) && length(sub_dirs)) {
-      dir_names <- basename(sub_dirs)
-      keep_dir <- vapply(dir_names, \(d) is.null(skip_set[[d]]), logical(1))
-      sub_dirs <- sub_dirs[keep_dir]
+    if (length(files)) {
+      m <- files[grepl("\\.(R|Rmd|Qmd)$", files, ignore.case = TRUE)]
+      if (length(m)) {
+        matching_files <- c(matching_files, m)
+      }
     }
 
     if (length(sub_dirs)) {
-      sub_files <- unlist(lapply(sub_dirs, walk_dir), use.names = FALSE)
-      matching_files <- c(matching_files, sub_files)
+      if (length(skip_dirs)) {
+        sub_dirs <- sub_dirs[!basename(sub_dirs) %in% skip_dirs]
+      }
+      if (length(sub_dirs)) {
+        dirs_to_visit <- c(dirs_to_visit, sub_dirs)
+      }
     }
-
-    matching_files
   }
 
-  walk_dir(dir_path)
+  sort(matching_files)
 }
 
 .collect_unique <- function(hits, field) {
@@ -240,7 +243,12 @@ scan_usage <- function(
   )
 }
 
-.extract_code <- function(file, skip_pattern = NULL, use_knitr = FALSE) {
+.extract_code <- function(
+  file,
+  skip_pattern = NULL,
+  skip_patterns = NULL,
+  use_knitr = FALSE
+) {
   ext <- file |>
     sub(".*\\.", "", x = _) |>
     tolower()
@@ -255,11 +263,25 @@ scan_usage <- function(
   lines <- readLines(file, warn = FALSE)
   code_raw <- paste(lines, collapse = "\n")
 
-  if (
-    !is.null(skip_pattern) &&
-      !grepl(skip_pattern, code_raw, perl = TRUE, useBytes = TRUE)
-  ) {
-    return("")
+  pats <- if (!is.null(skip_patterns)) {
+    skip_patterns
+  } else if (!is.null(skip_pattern)) {
+    skip_pattern
+  } else {
+    NULL
+  }
+
+  if (!is.null(pats)) {
+    matched <- FALSE
+    for (pat in pats) {
+      if (grepl(pat, code_raw, perl = TRUE, useBytes = TRUE)) {
+        matched <- TRUE
+        break
+      }
+    }
+    if (!matched) {
+      return("")
+    }
   }
 
   if (ext == "r") {

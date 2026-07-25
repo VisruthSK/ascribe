@@ -98,8 +98,7 @@ for (repo in repos) {
         allowed_packages = universe$packages,
         export_index = universe$export_index,
         origin_map = universe$origin_map,
-        strict = FALSE,
-        quiet = TRUE
+        strict = FALSE
       )
     )
     benchmark_run(
@@ -111,7 +110,6 @@ for (repo in repos) {
         export_index = universe$export_index,
         origin_map = universe$origin_map,
         strict = FALSE,
-        quiet = TRUE,
         use_knitr = TRUE
       )
     )
@@ -124,8 +122,7 @@ for (repo in repos) {
         allowed_packages = universe$packages,
         export_index = universe$export_index,
         origin_map = universe$origin_map,
-        strict = FALSE,
-        quiet = TRUE
+        strict = FALSE
       )
     )
   }

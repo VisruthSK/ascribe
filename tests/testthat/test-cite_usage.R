@@ -9,8 +9,7 @@ test_that("cite_usage builds citations from a package universe", {
     universe$packages,
     universe$export_index,
     universe$origin_map,
-    ignore_unqualified_functions = character(),
-    quiet = TRUE
+    ignore_unqualified_functions = character()
   )
   citations <- cite_usage(
     usage,
@@ -60,8 +59,7 @@ test_that("cite_usage can return BibTeX and report no citations", {
         path,
         "stats",
         list(),
-        character(),
-        quiet = TRUE
+        character()
       ),
       format = "bibtex"
     ),
