@@ -838,9 +838,10 @@ test_that(".scan_dir_files preserves exact file ordering, empty skip_dirs, and h
   dir.create(deep_path, recursive = TRUE)
   deep_file <- file.path(deep_path, "deep.R")
   writeLines("library(stats)", deep_file)
+  norm_deep_file <- normalizePath(deep_file, winslash = "/", mustWork = TRUE)
 
   deep_files <- .scan_dir_files(tmp_dir, skip_dirs = character(0))
-  expect_true(chartr("\\", "/", deep_file) %in% deep_files)
+  expect_true(norm_deep_file %in% deep_files)
 })
 
 test_that("package universes of 200, 500, and 1,000 packages scale chunked regex prefilter", {
