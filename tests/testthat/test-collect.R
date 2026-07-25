@@ -6,12 +6,12 @@ test_that("collect_pkg_funs collects functions from a package", {
 })
 
 test_that("collect_r6_methods returns empty vector when no R6 classes exist", {
-  res <- collect_r6_methods("stats", getNamespaceExports("stats"))
+  res <- collect_r6_methods("stats")
   expect_type(res, "character")
 })
 
 test_that("collect_r6_methods finds exported and internal R6 methods", {
-  methods <- collect_r6_methods("testthat", getNamespaceExports("testthat"))
+  methods <- collect_r6_methods("testthat")
   expect_true("public_fun" %in% methods)
   expect_false(anyNA(methods))
   expect_true(all(nzchar(methods)))
