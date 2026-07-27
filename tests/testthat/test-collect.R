@@ -54,3 +54,93 @@ test_that("build_origin_map creates pkg::fun keys mapping to origin", {
   expect_equal(omap[["nonexistent::foo"]], "nonexistent")
   expect_equal(omap[["datasets::iris"]], "datasets")
 })
+
+test_that("collect_pkg_funs, resolve_origin, and build_origin_map handle pure re-exports", {
+  tmp_lib <- tempfile()
+  dir.create(tmp_lib)
+
+  up_dir <- tempfile()
+  dir.create(file.path(up_dir, "R"), recursive = TRUE)
+  writeLines("foo <- function() \"upstream\"", file.path(up_dir, "R", "foo.R"))
+  writeLines(
+    c(
+      "Package: ascribetestupstream",
+      "Version: 0.0.1",
+      "Title: Test Helper for Ascribe Re-export Handling",
+      "Description: Minimal upstream package for testing re-export detection.",
+      "Author: Ascribe Tests",
+      "Maintainer: Ascribe Tests <tests@ascribe.test>",
+      "License: MIT"
+    ),
+    file.path(up_dir, "DESCRIPTION")
+  )
+  writeLines("export(foo)", file.path(up_dir, "NAMESPACE"))
+
+  down_dir <- tempfile()
+  dir.create(file.path(down_dir, "R"), recursive = TRUE)
+  writeLines("NULL", file.path(down_dir, "R", "dummy.R"))
+  writeLines(
+    c(
+      "Package: ascribetestdownstream",
+      "Version: 0.0.1",
+      "Title: Test Helper for Ascribe Re-export Handling",
+      "Description: Minimal downstream package for testing re-export detection.",
+      "Author: Ascribe Tests",
+      "Maintainer: Ascribe Tests <tests@ascribe.test>",
+      "License: MIT",
+      "Imports: ascribetestupstream"
+    ),
+    file.path(down_dir, "DESCRIPTION")
+  )
+  writeLines(
+    c("importFrom(ascribetestupstream, foo)", "export(foo)"),
+    file.path(down_dir, "NAMESPACE")
+  )
+
+  old_lib <- .libPaths()
+  on.exit(
+    {
+      if (isNamespaceLoaded("ascribetestdownstream")) {
+        unloadNamespace("ascribetestdownstream")
+      }
+      if (isNamespaceLoaded("ascribetestupstream")) {
+        unloadNamespace("ascribetestupstream")
+      }
+      .libPaths(old_lib)
+      unlink(c(tmp_lib, up_dir, down_dir), recursive = TRUE)
+    },
+    add = TRUE
+  )
+
+  .libPaths(c(tmp_lib, old_lib))
+  utils::install.packages(
+    up_dir,
+    repos = NULL,
+    type = "source",
+    lib = tmp_lib,
+    quiet = TRUE
+  )
+  utils::install.packages(
+    down_dir,
+    repos = NULL,
+    type = "source",
+    lib = tmp_lib,
+    quiet = TRUE
+  )
+
+  ns <- asNamespace("ascribetestdownstream")
+  expect_false(exists("foo", envir = ns, inherits = FALSE))
+
+  expect_true("foo" %in% collect_pkg_funs("ascribetestdownstream"))
+  expect_equal(
+    resolve_origin("ascribetestdownstream", "foo"),
+    "ascribetestupstream"
+  )
+
+  exports <- list(
+    ascribetestupstream = collect_pkg_funs("ascribetestupstream"),
+    ascribetestdownstream = collect_pkg_funs("ascribetestdownstream")
+  )
+  omap <- build_origin_map(exports)
+  expect_equal(omap[["ascribetestdownstream::foo"]], "ascribetestupstream")
+})

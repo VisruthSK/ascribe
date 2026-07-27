@@ -13,7 +13,9 @@ collect_pkg_funs <- function(pkg) {
 
   getNamespaceExports(pkg) |>
     Filter(
-      \(x) is.function(get0(x, envir = ns, inherits = FALSE)),
+      \(x) {
+        is.function(tryCatch(getExportedValue(ns, x), error = function(e) NULL))
+      },
       x = _
     ) |>
     c(collect_r6_methods(pkg)) |>
@@ -51,7 +53,7 @@ collect_r6_methods <- function(pkg) {
   if (is.null(ns)) {
     return(NA_character_)
   }
-  obj <- get0(name, envir = ns, inherits = FALSE)
+  obj <- tryCatch(getExportedValue(ns, name), error = function(e) NULL)
   if (!is.function(obj)) {
     return(NA_character_)
   }
