@@ -128,6 +128,7 @@ scan_usage <- function(
         skip_patterns = skip_patterns,
         use_knitr = use_knitr
       )
+      is_r <- grepl("\\.r$", file, ignore.case = TRUE)
       .scan_tokens(
         code_str,
         allowed_packages = allowed_packages,
@@ -135,7 +136,7 @@ scan_usage <- function(
         metapackages = metapackages,
         walker = walker,
         file_path = file,
-        skip_patterns = skip_patterns
+        skip_patterns = if (is_r) NULL else skip_patterns
       )
     }
   )
@@ -190,18 +191,21 @@ scan_usage <- function(
       next
     }
     entries <- chartr("\\", "/", entries)
-    is_dir <- dir.exists(entries)
+
+    is_source_file <- grepl("\\.(R|Rmd|Qmd)$", entries, ignore.case = TRUE)
+    maybe_dir_idx <- which(!is_source_file)
+    is_dir <- logical(length(entries))
+    if (length(maybe_dir_idx)) {
+      is_dir[maybe_dir_idx] <- dir.exists(entries[maybe_dir_idx])
+    }
 
     sub_dirs <- entries[is_dir]
-    files <- entries[!is_dir]
+    files <- entries[is_source_file]
 
     if (length(files)) {
-      m <- files[grepl("\\.(R|Rmd|Qmd)$", files, ignore.case = TRUE)]
-      k <- length(m)
-      if (k) {
-        matching_files[(n_files + 1L):(n_files + k)] <- m
-        n_files <- n_files + k
-      }
+      k <- length(files)
+      matching_files[(n_files + 1L):(n_files + k)] <- files
+      n_files <- n_files + k
     }
 
     if (length(sub_dirs)) {
@@ -290,8 +294,29 @@ scan_usage <- function(
     ))
   }
 
-  lines <- readLines(file, warn = FALSE)
-  code_raw <- paste(lines, collapse = "\n")
+  con <- file(file, "rb")
+  on.exit(close(con), add = TRUE)
+  chunks <- list()
+  repeat {
+    chunk <- readBin(con, "raw", n = 65536L)
+    n <- length(chunk)
+    if (n) {
+      chunks[[length(chunks) + 1L]] <- chunk
+    }
+    if (n < 65536L) {
+      break
+    }
+  }
+  code_raw <- if (!length(chunks)) {
+    ""
+  } else {
+    raw <- if (length(chunks) == 1L) {
+      chunks[[1L]]
+    } else {
+      unlist(chunks, use.names = FALSE)
+    }
+    gsub("\r\n", "\n", rawToChar(raw), fixed = TRUE)
+  }
 
   if (!.any_pattern_matches(skip_patterns, code_raw)) {
     return("")
@@ -318,7 +343,7 @@ scan_usage <- function(
     knitr::purl(file, tmp, quiet = TRUE, documentation = 0)
     paste(readLines(tmp, warn = FALSE), collapse = "\n")
   } else {
-    .extract_markdown_code(lines)
+    .extract_markdown_code(strsplit(code_raw, "\n", fixed = TRUE)[[1]])
   }
 }
 
