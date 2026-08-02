@@ -111,31 +111,14 @@ scan_usage <- function(
     ))
   }
 
-  # Build chunked skip_patterns once here rather than once per file inside .extract_code
-  skip_pkgs <- c(allowed_packages, names(metapackages))
-  u_skip_pkgs <- unique(skip_pkgs)
-  skip_patterns <- if (length(u_skip_pkgs) > 0L) {
-    chunk_size <- 200L
-    n_chunks <- ceiling(length(u_skip_pkgs) / chunk_size)
-    chunks <- split(
-      u_skip_pkgs,
-      rep(
-        seq_len(n_chunks),
-        each = chunk_size,
-        length.out = length(u_skip_pkgs)
-      )
-    )
-    vapply(
-      chunks,
-      \(chk) {
-        escaped <- gsub("([][{}()+*^$|\\\\.?])", "\\\\\\1", chk)
-        paste0("\\b(", paste(escaped, collapse = "|"), ")\\b")
-      },
-      character(1)
-    )
-  } else {
-    NULL
-  }
+  # Built once here (not per file) and reused by both .extract_code (on the
+  # raw file text) and .scan_tokens (on the post-extraction code), so files
+  # are never rescanned for the same package names with two different
+  # mechanisms.
+  skip_patterns <- .build_skip_patterns(c(
+    allowed_packages,
+    names(metapackages)
+  ))
 
   hits <- lapply(
     unique(files),
@@ -151,7 +134,8 @@ scan_usage <- function(
         resolver_index = resolver_index,
         metapackages = metapackages,
         walker = walker,
-        file_path = file
+        file_path = file,
+        skip_patterns = skip_patterns
       )
     }
   )
@@ -182,12 +166,19 @@ scan_usage <- function(
 
 .scan_dir_files <- function(dir_path, skip_dirs) {
   dir_path <- normalizePath(dir_path, winslash = "/", mustWork = TRUE)
-  dirs_to_visit <- dir_path
-  matching_files <- character()
 
-  while (length(dirs_to_visit) > 0L) {
-    curr <- dirs_to_visit[[1L]]
-    dirs_to_visit <- dirs_to_visit[-1L]
+  # BFS queue as an index cursor over plain vectors grown by out-of-bounds
+  # indexed assignment (`x[i] <- v`). R (>= 3.4.0) overallocates on such
+  # extension, so appends are amortized O(1); `c(x, v)` always copies.
+  dirs_to_visit <- dir_path
+  n_dirs <- 1L
+  matching_files <- character()
+  n_files <- 0L
+
+  i <- 1L
+  while (i <= n_dirs) {
+    curr <- dirs_to_visit[[i]]
+    i <- i + 1L
 
     entries <- list.files(
       curr,
@@ -206,8 +197,10 @@ scan_usage <- function(
 
     if (length(files)) {
       m <- files[grepl("\\.(R|Rmd|Qmd)$", files, ignore.case = TRUE)]
-      if (length(m)) {
-        matching_files <- c(matching_files, m)
+      k <- length(m)
+      if (k) {
+        matching_files[(n_files + 1L):(n_files + k)] <- m
+        n_files <- n_files + k
       }
     }
 
@@ -215,13 +208,15 @@ scan_usage <- function(
       if (length(skip_dirs)) {
         sub_dirs <- sub_dirs[!basename(sub_dirs) %in% skip_dirs]
       }
-      if (length(sub_dirs)) {
-        dirs_to_visit <- c(dirs_to_visit, sub_dirs)
+      k <- length(sub_dirs)
+      if (k) {
+        dirs_to_visit[(n_dirs + 1L):(n_dirs + k)] <- sub_dirs
+        n_dirs <- n_dirs + k
       }
     }
   }
 
-  sort(matching_files)
+  sort(matching_files[seq_len(n_files)])
 }
 
 .collect_unique <- function(hits, field) {
@@ -230,6 +225,42 @@ scan_usage <- function(
     unlist(use.names = FALSE) |>
     unique() |>
     sort()
+}
+
+# Chunks pkgs into word-boundary alternation regexes (PCRE limits how many
+# alternatives a single pattern can hold), so a package-name prefilter
+# stays a handful of grepl() calls even for large universes.
+.build_skip_patterns <- function(pkgs) {
+  u_pkgs <- unique(pkgs)
+  if (!length(u_pkgs)) {
+    return(NULL)
+  }
+  chunk_size <- 200L
+  n_chunks <- ceiling(length(u_pkgs) / chunk_size)
+  chunks <- split(
+    u_pkgs,
+    rep(seq_len(n_chunks), each = chunk_size, length.out = length(u_pkgs))
+  )
+  vapply(
+    chunks,
+    \(chk) {
+      escaped <- gsub("([][{}()+*^$|\\\\.?])", "\\\\\\1", chk)
+      paste0("\\b(", paste(escaped, collapse = "|"), ")\\b")
+    },
+    character(1)
+  )
+}
+
+.any_pattern_matches <- function(patterns, text) {
+  if (is.null(patterns)) {
+    return(TRUE)
+  }
+  for (pat in patterns) {
+    if (grepl(pat, text, perl = TRUE, useBytes = TRUE)) {
+      return(TRUE)
+    }
+  }
+  FALSE
 }
 
 .normalize_metapackages <- function(metapackages, allowed_packages) {
@@ -262,17 +293,8 @@ scan_usage <- function(
   lines <- readLines(file, warn = FALSE)
   code_raw <- paste(lines, collapse = "\n")
 
-  if (!is.null(skip_patterns)) {
-    matched <- FALSE
-    for (pat in skip_patterns) {
-      if (grepl(pat, code_raw, perl = TRUE, useBytes = TRUE)) {
-        matched <- TRUE
-        break
-      }
-    }
-    if (!matched) {
-      return("")
-    }
+  if (!.any_pattern_matches(skip_patterns, code_raw)) {
+    return("")
   }
 
   if (ext == "r") {
@@ -409,25 +431,16 @@ scan_usage <- function(
   resolver_index,
   metapackages,
   walker,
-  file_path
+  file_path,
+  skip_patterns = .build_skip_patterns(c(allowed_packages, names(metapackages)))
 ) {
   empty <- list(pkgs = character(), keys = character(), ambiguous = character())
   if (!nzchar(code)) {
     return(empty)
   }
 
-  relevant_pkgs <- unique(c(allowed_packages, names(metapackages)))
-  if (length(relevant_pkgs) > 0L) {
-    has_pkg <- FALSE
-    for (p in relevant_pkgs) {
-      if (grepl(p, code, fixed = TRUE, useBytes = TRUE)) {
-        has_pkg <- TRUE
-        break
-      }
-    }
-    if (!has_pkg) {
-      return(empty)
-    }
+  if (!.any_pattern_matches(skip_patterns, code)) {
+    return(empty)
   }
 
   expr <- tryCatch(
