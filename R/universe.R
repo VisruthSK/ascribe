@@ -72,7 +72,7 @@ build_universe_data <- function(packages) {
 #'   the saved file (e.g., citation environments).
 #' @param include_scanner_defaults If `TRUE`, also saves `.stdlib_funs`
 #'   and `.scan_skip_dirs`. Defaults to `FALSE`.
-#' @param file Output path. Defaults to `"R/sysdata.rda"`.
+#' @param file Output path (required).
 #' @return Invisibly returns the result of [build_universe_data()].
 #' @export
 #' @examples
@@ -84,7 +84,7 @@ generate_universe_sysdata <- function(
   prefix,
   extra_vars = list(),
   include_scanner_defaults = FALSE,
-  file = "R/sysdata.rda"
+  file
 ) {
   data <- build_universe_data(packages)
 
