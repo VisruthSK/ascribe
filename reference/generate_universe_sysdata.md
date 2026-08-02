@@ -12,7 +12,7 @@ generate_universe_sysdata(
   prefix,
   extra_vars = list(),
   include_scanner_defaults = FALSE,
-  file = "R/sysdata.rda"
+  file
 )
 ```
 
@@ -39,7 +39,7 @@ generate_universe_sysdata(
 
 - file:
 
-  Output path. Defaults to `"R/sysdata.rda"`.
+  Output path (required).
 
 ## Value
 
@@ -78,6 +78,6 @@ When `include_scanner_defaults` is `TRUE`, `.stdlib_funs` and
 ``` r
 file <- tempfile(fileext = ".rda")
 generate_universe_sysdata(c("stats", "utils"), "my", file = file)
-#> ✔ Successfully generated /tmp/Rtmpj0Bjn0/file19f63becb649.rda
+#> ✔ Successfully generated /tmp/RtmpTZPb4l/file1bc3406c0f3.rda
 unlink(file)
 ```
