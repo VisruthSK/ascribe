@@ -33,8 +33,10 @@
 #'   packages that should be treated as co-attached for unqualified resolution.
 #'   Defaults to `NULL`.
 #' @param use_knitr Logical. If `TRUE`, parse `.Rmd` and `.qmd` files with
-#'   `knitr::purl()`. This is more accurate for knitr/quarto chunk handling
-#'   but much slower than the default in-house parser. Defaults to `FALSE`.
+#'   `knitr::purl()`, which resolves knitr features the in-house parser ignores,
+#'   such as `child` documents. It is also roughly an order of magnitude slower
+#'   and comments out `eval=FALSE` and `purl=FALSE` chunks, so usage in them
+#'   goes unrecorded. Defaults to `FALSE`.
 #' @return A list of packages, resolved functions, and ambiguous function calls.
 #' @export
 #' @examples
@@ -260,7 +262,7 @@ scan_usage <- function(
     return(TRUE)
   }
   for (pat in patterns) {
-    if (grepl(pat, text, perl = TRUE, useBytes = TRUE)) {
+    if (any(grepl(pat, text, perl = TRUE, useBytes = TRUE))) {
       return(TRUE)
     }
   }
@@ -390,7 +392,7 @@ scan_usage <- function(
   if (!j) {
     return("")
   }
-  paste(unlist(chunks[seq_len(j)], use.names = FALSE), collapse = "\n")
+  vapply(chunks[seq_len(j)], paste, character(1), collapse = "\n")
 }
 
 .scan_use_heads <- c("c", "list")
@@ -443,7 +445,7 @@ scan_usage <- function(
   skip_patterns = .build_skip_patterns(c(allowed_packages, names(metapackages)))
 ) {
   empty <- list(pkgs = character(), keys = character(), ambiguous = character())
-  if (!nzchar(code)) {
+  if (!any(nzchar(code))) {
     return(empty)
   }
 
@@ -456,6 +458,18 @@ scan_usage <- function(
     error = function(e) NULL
   )
   if (is.null(expr)) {
+    expr <- do.call(
+      c,
+      lapply(
+        code,
+        \(chunk) {
+          tryCatch(
+            parse(text = chunk, keep.source = FALSE),
+            error = function(e) NULL
+          )
+        }
+      )
+    )
     path_label <- if (
       length(file_path) > 0L &&
         !is.null(file_path[[1L]]) &&
@@ -470,7 +484,6 @@ scan_usage <- function(
       "x" = "Syntax error in file."
     )
     cli::cli_warn(msg)
-    return(empty)
   }
 
   acc <- new.env(parent = emptyenv())

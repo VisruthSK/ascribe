@@ -297,6 +297,42 @@ test_that("scan_usage handles syntax errors gracefully with warning", {
   expect_equal(res$packages, character())
 })
 
+test_that("an unparseable chunk does not discard the rest of an Rmd", {
+  tmp <- tempfile(fileext = ".Rmd")
+  on.exit(unlink(tmp), add = TRUE)
+  writeLines(
+    c(
+      "```{r stan-code, eval=FALSE}",
+      "real normal_lpdf(vector y, real sigma) {",
+      "  return 0.5 * dot_self(y);",
+      "}",
+      "```",
+      "",
+      "```{r}",
+      "library(stats)",
+      "median(1:10)",
+      "```"
+    ),
+    tmp
+  )
+
+  expect_warning(
+    res <- scan_usage(
+      path = tmp,
+      allowed_packages = "stats",
+      export_index = list(median = "stats"),
+      origin_map = list2env(
+        list("stats::median" = "stats"),
+        parent = emptyenv()
+      ),
+      ignore_unqualified_functions = character()
+    ),
+    "Failed to parse"
+  )
+  expect_equal(res$packages, "stats")
+  expect_equal(res$functions, "stats::median")
+})
+
 test_that("scan_usage handles member calls, slot calls, and use() calls", {
   tmp <- tempfile(fileext = ".R")
   on.exit(unlink(tmp), add = TRUE)
