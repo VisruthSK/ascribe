@@ -527,19 +527,31 @@ scan_usage <- function(
   export_names,
   metapackages
 ) {
-  make_env <- function(vec) {
+  make_env <- function(vec, value = TRUE) {
     if (!length(vec)) {
       return(new.env(parent = emptyenv(), hash = TRUE))
     }
-    vals <- rep.int(list(TRUE), length(vec))
+    vals <- rep.int(list(value), length(vec))
     names(vals) <- vec
     list2env(vals, parent = emptyenv(), hash = TRUE)
   }
 
-  ignore_unqual_env <- make_env(ignore_unqualified_functions)
   allowed_pkgs_env <- make_env(allowed_packages)
-  ignore_heads_env <- make_env(ignore_heads)
   export_names_env <- make_env(export_names)
+
+  head_kind_env <- make_env(
+    setdiff(export_names, ignore_unqualified_functions),
+    6L
+  )
+  head_kind_env[["::"]] <- 2L
+  head_kind_env[[":::"]] <- 2L
+  head_kind_env[["library"]] <- 3L
+  head_kind_env[["require"]] <- 3L
+  head_kind_env[["requireNamespace"]] <- 4L
+  head_kind_env[["use"]] <- 5L
+  for (nm in ignore_heads) {
+    head_kind_env[[nm]] <- 1L
+  }
 
   walk <- function(x, acc) {
     if (is.null(x)) {
@@ -550,13 +562,16 @@ scan_usage <- function(
       acc$visit_idx <- acc$visit_idx + 1L
 
       head <- x[[1L]]
-      head_is_call <- is.call(head)
 
       if (is.symbol(head)) {
         head_name <- as.character(head)
-        if (!is.null(ignore_heads_env[[head_name]])) {
-          # Skip language keywords, operators, and subsetting.
-        } else if (head_name == "::" || head_name == ":::") {
+        kind <- head_kind_env[[head_name]]
+        if (is.null(kind) || kind == 1L) {
+          # Not in the export index, or a language keyword/operator/subset.
+        } else if (kind == 6L) {
+          acc$unqual_funs <- c(acc$unqual_funs, head_name)
+          acc$unqual_visit_idx <- c(acc$unqual_visit_idx, acc$visit_idx)
+        } else if (kind == 2L) {
           if (length(x) >= 3L) {
             pkg <- .ast_lit_name(x[[2L]])
             fun <- .ast_lit_name(x[[3L]])
@@ -569,15 +584,11 @@ scan_usage <- function(
               acc$ns_keys <- c(acc$ns_keys, paste0(pkg, "::", fun))
             }
           }
-        } else if (
-          head_name == "library" ||
-            head_name == "require" ||
-            head_name == "requireNamespace"
-        ) {
+        } else if (kind == 3L || kind == 4L) {
           pkg <- .ast_get_lib_pkg(x)
           if (!is.null(pkg)) {
             is_allowed <- !is.null(allowed_pkgs_env[[pkg]])
-            is_attach <- head_name != "requireNamespace"
+            is_attach <- kind == 3L
 
             if (is_allowed) {
               acc$lib_pkgs <- c(acc$lib_pkgs, pkg)
@@ -600,7 +611,7 @@ scan_usage <- function(
               }
             }
           }
-        } else if (head_name == "use") {
+        } else {
           pkg <- .ast_get_lib_pkg(x)
           if (
             !is.null(pkg) &&
@@ -612,13 +623,8 @@ scan_usage <- function(
               acc$ns_keys <- c(acc$ns_keys, paste0(pkg, "::", funs))
             }
           }
-        } else if (is.null(export_names_env[[head_name]])) {
-          # Ignore calls not in the export index.
-        } else if (is.null(ignore_unqual_env[[head_name]])) {
-          acc$unqual_funs <- c(acc$unqual_funs, head_name)
-          acc$unqual_visit_idx <- c(acc$unqual_visit_idx, acc$visit_idx)
         }
-      } else if (head_is_call) {
+      } else if (is.call(head)) {
         member_fun <- .ast_member_fun(head)
         if (
           !is.null(member_fun) &&
