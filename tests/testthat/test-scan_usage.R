@@ -865,7 +865,7 @@ test_that("package universes of 200, 500, and 1,000 packages scale chunked regex
   }
 })
 
-test_that(".extract_code reads empty files and files spanning multiple read chunks", {
+test_that(".extract_code reads empty files", {
   tmp_empty <- tempfile(fileext = ".R")
   file.create(tmp_empty)
   on.exit(unlink(tmp_empty), add = TRUE)
@@ -878,28 +878,6 @@ test_that(".extract_code reads empty files and files spanning multiple read chun
     origin_map = new.env(parent = emptyenv())
   )
   expect_equal(res_empty$packages, character())
-
-  tmp_large <- tempfile(fileext = ".R")
-  on.exit(unlink(tmp_large), add = TRUE)
-  padding <- paste0("# ", strrep("a", 70000))
-  writeLines(c("library(stats)", padding, "stats::filter(1:5, 1)"), tmp_large)
-  expect_gt(file.size(tmp_large), 65536L)
-
-  code_str <- .extract_code(tmp_large)
-  expect_match(code_str, padding, fixed = TRUE)
-  expect_match(code_str, "stats::filter", fixed = TRUE)
-
-  res_large <- scan_usage(
-    path = tmp_large,
-    allowed_packages = "stats",
-    export_index = list(filter = "stats"),
-    origin_map = list2env(
-      list("stats::filter" = "stats"),
-      parent = emptyenv()
-    )
-  )
-  expect_true("stats" %in% res_large$packages)
-  expect_true("stats::filter" %in% res_large$functions)
 })
 
 test_that("scanner results are identical before and after cleanup", {

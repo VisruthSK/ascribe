@@ -16,6 +16,7 @@ BugReports: https://github.com/VisruthSK/ascribe/issues
 Depends: 
     R (>= 4.2.0)
 Imports:
+    brio,
     cli,
     fastmatch
 Suggests: 

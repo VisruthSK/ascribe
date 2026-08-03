@@ -278,6 +278,11 @@ scan_usage <- function(
   )
 }
 
+.read_file_lf <- function(file) {
+  raw <- brio::read_file(file)
+  if (!length(raw)) "" else gsub("\r\n", "\n", raw, fixed = TRUE)
+}
+
 .extract_code <- function(
   file,
   skip_patterns = NULL,
@@ -294,29 +299,7 @@ scan_usage <- function(
     ))
   }
 
-  con <- file(file, "rb")
-  on.exit(close(con), add = TRUE)
-  chunks <- list()
-  repeat {
-    chunk <- readBin(con, "raw", n = 65536L)
-    n <- length(chunk)
-    if (n) {
-      chunks[[length(chunks) + 1L]] <- chunk
-    }
-    if (n < 65536L) {
-      break
-    }
-  }
-  code_raw <- if (!length(chunks)) {
-    ""
-  } else {
-    raw <- if (length(chunks) == 1L) {
-      chunks[[1L]]
-    } else {
-      unlist(chunks, use.names = FALSE)
-    }
-    gsub("\r\n", "\n", rawToChar(raw), fixed = TRUE)
-  }
+  code_raw <- .read_file_lf(file)
 
   if (!.any_pattern_matches(skip_patterns, code_raw)) {
     return("")
@@ -341,7 +324,7 @@ scan_usage <- function(
     tmp <- tempfile(fileext = ".R")
     on.exit(unlink(tmp), add = TRUE)
     knitr::purl(file, tmp, quiet = TRUE, documentation = 0)
-    paste(readLines(tmp, warn = FALSE), collapse = "\n")
+    .read_file_lf(tmp)
   } else {
     .extract_markdown_code(strsplit(code_raw, "\n", fixed = TRUE)[[1]])
   }
