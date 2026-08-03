@@ -46,9 +46,8 @@ Defaults to \code{NULL}.}
 
 \item{use_knitr}{Logical. If \code{TRUE}, parse \code{.Rmd} and \code{.qmd} files with
 \code{knitr::purl()}, which resolves knitr features the in-house parser ignores,
-such as \code{child} documents. It is also roughly an order of magnitude slower
-and comments out \code{eval=FALSE} and \code{purl=FALSE} chunks, so usage in them
-goes unrecorded. Defaults to \code{FALSE}.}
+such as \code{child} documents. It also comments out \code{eval=FALSE} and
+\code{purl=FALSE} chunks, so usage in them goes unrecorded. Defaults to \code{FALSE}.}
 }
 \value{
 A list of packages, resolved functions, and ambiguous function calls.

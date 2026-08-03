@@ -34,9 +34,8 @@
 #'   Defaults to `NULL`.
 #' @param use_knitr Logical. If `TRUE`, parse `.Rmd` and `.qmd` files with
 #'   `knitr::purl()`, which resolves knitr features the in-house parser ignores,
-#'   such as `child` documents. It is also roughly an order of magnitude slower
-#'   and comments out `eval=FALSE` and `purl=FALSE` chunks, so usage in them
-#'   goes unrecorded. Defaults to `FALSE`.
+#'   such as `child` documents. It also comments out `eval=FALSE` and
+#'   `purl=FALSE` chunks, so usage in them goes unrecorded. Defaults to `FALSE`.
 #' @return A list of packages, resolved functions, and ambiguous function calls.
 #' @export
 #' @examples
@@ -303,12 +302,18 @@ scan_usage <- function(
 
   code_raw <- .read_file_lf(file)
 
-  if (!.any_pattern_matches(skip_patterns, code_raw)) {
-    return("")
+  if (ext == "r") {
+    if (!.any_pattern_matches(skip_patterns, code_raw)) {
+      return("")
+    }
+    return(code_raw)
   }
 
-  if (ext == "r") {
-    return(code_raw)
+  if (
+    !.any_pattern_matches(skip_patterns, code_raw) &&
+      !(use_knitr && grepl("child", code_raw, fixed = TRUE))
+  ) {
+    return("")
   }
 
   if (!grepl("(?m)^\\s*[`~]{3,}", code_raw, perl = TRUE, useBytes = TRUE)) {

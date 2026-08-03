@@ -125,6 +125,83 @@ test_that("scan_usage works with use_knitr = TRUE", {
   expect_true("stats::median" %in% res$functions)
 })
 
+test_that("use_knitr = TRUE resolves child documents", {
+  skip_if_not_installed("knitr")
+  dir <- tempfile()
+  dir.create(dir)
+  on.exit(unlink(dir, recursive = TRUE), add = TRUE)
+
+  writeLines(
+    c("```{r}", "library(stats)", "median(1:10)", "```"),
+    file.path(dir, "child.Rmd")
+  )
+  parent <- file.path(dir, "parent.Rmd")
+  writeLines(
+    c(
+      "```{r}",
+      "library(utils)",
+      "head(letters)",
+      "```",
+      "",
+      "```{r, child=\"child.Rmd\"}",
+      "```"
+    ),
+    parent
+  )
+
+  scan <- function(use_knitr) {
+    scan_usage(
+      path = parent,
+      allowed_packages = c("stats", "utils"),
+      export_index = list(median = "stats", head = "utils"),
+      origin_map = list2env(
+        list("stats::median" = "stats", "utils::head" = "utils"),
+        parent = emptyenv()
+      ),
+      ignore_unqualified_functions = character(),
+      use_knitr = use_knitr
+    )
+  }
+
+  knitted <- scan(TRUE)
+  expect_equal(knitted$packages, c("stats", "utils"))
+  expect_equal(knitted$functions, c("stats::median", "utils::head"))
+
+  # the in-house parser only sees code written in the file itself
+  in_house <- scan(FALSE)
+  expect_equal(in_house$packages, "utils")
+  expect_equal(in_house$functions, "utils::head")
+})
+
+test_that("use_knitr = TRUE resolves children of a file that names no package", {
+  skip_if_not_installed("knitr")
+  dir <- tempfile()
+  dir.create(dir)
+  on.exit(unlink(dir, recursive = TRUE), add = TRUE)
+
+  writeLines(
+    c("```{r}", "library(stats)", "median(1:10)", "```"),
+    file.path(dir, "child.Rmd")
+  )
+  parent <- file.path(dir, "parent.Rmd")
+  writeLines(c("```{r, child=\"child.Rmd\"}", "```"), parent)
+
+  res <- scan_usage(
+    path = parent,
+    allowed_packages = "stats",
+    export_index = list(median = "stats"),
+    origin_map = list2env(
+      list("stats::median" = "stats"),
+      parent = emptyenv()
+    ),
+    ignore_unqualified_functions = character(),
+    use_knitr = TRUE
+  )
+
+  expect_equal(res$packages, "stats")
+  expect_equal(res$functions, "stats::median")
+})
+
 test_that("scan_usage handles metapackages correctly", {
   tmp <- tempfile(fileext = ".R")
   on.exit(unlink(tmp), add = TRUE)
