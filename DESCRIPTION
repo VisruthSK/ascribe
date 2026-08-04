@@ -16,14 +16,14 @@ BugReports: https://github.com/VisruthSK/ascribe/issues
 Depends: 
     R (>= 4.2.0)
 Imports:
+    brio,
     cli,
     fastmatch
 Suggests: 
     knitr,
     quarto,
     spelling,
-    testthat (>= 3.0.0),
-    withr
+    testthat (>= 3.0.0)
 VignetteBuilder: 
     quarto
 Config/testthat/edition: 3

@@ -6,28 +6,19 @@
 \usage{
 scan_usage(
   path = ".",
-  allowed_packages,
-  export_index,
-  origin_map,
+  universe,
   ignore_unqualified_functions = .stdlib_funs,
   strict = FALSE,
   skip_dirs = .scan_skip_dirs,
   metapackages = NULL,
-  use_knitr = FALSE,
-  quiet = FALSE
+  use_knitr = FALSE
 )
 }
 \arguments{
 \item{path}{A single project directory (searched recursively) or a vector of
 files (.R/.Rmd/.qmd).}
 
-\item{allowed_packages}{Character vector of package namespaces to attribute
-calls to.}
-
-\item{export_index}{Named list mapping function names to packages.}
-
-\item{origin_map}{Named character vector mapping \code{pkg::fun} keys to the
-origin package.}
+\item{universe}{A universe returned by \code{\link[=build_universe_data]{build_universe_data()}}.}
 
 \item{ignore_unqualified_functions}{Defaults to exports from base R packages
 listed in \code{stdlib_funs()}. Character vector of function names to ignore when
@@ -46,11 +37,9 @@ packages that should be treated as co-attached for unqualified resolution.
 Defaults to \code{NULL}.}
 
 \item{use_knitr}{Logical. If \code{TRUE}, parse \code{.Rmd} and \code{.qmd} files with
-\code{knitr::purl()}. This is more accurate for knitr/quarto chunk handling
-but much slower than the default in-house parser. Defaults to \code{FALSE}.}
-
-\item{quiet}{Logical. If \code{TRUE}, suppresses status messages. Defaults to
-\code{FALSE}.}
+\code{knitr::purl()}, which resolves knitr features the in-house parser ignores,
+such as \code{child} documents. It also comments out \code{eval=FALSE} and
+\code{purl=FALSE} chunks, so usage in them goes unrecorded. Defaults to \code{FALSE}.}
 }
 \value{
 A list of packages, resolved functions, and ambiguous function calls.
@@ -82,13 +71,7 @@ writeLines(
   ),
   path
 )
-scan_usage(
-  path,
-  allowed_packages = c("stats", "utils"),
-  export_index = list(filter = "stats"),
-  origin_map = c("stats::filter" = "stats"),
-  ignore_unqualified_functions = character(),
-  quiet = TRUE
-)
+universe <- build_universe_data(c("stats", "utils"))
+scan_usage(path, universe, ignore_unqualified_functions = character())
 unlink(path)
 }

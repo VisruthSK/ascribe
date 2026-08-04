@@ -5,14 +5,14 @@
 #' needed by [scan_usage()]. All packages must be installed.
 #'
 #' @param packages Character vector of package names.
-#' @return A named list with components:
+#' @return An `ascribe_universe` object with components:
 #'   \describe{
 #'     \item{packages}{The input package names.}
 #'     \item{exports}{Named list mapping package names to character
 #'       vectors of exported function names (from [collect_pkg_funs()]).}
 #'     \item{export_index}{Named list mapping function names to
 #'       character vectors of packages (from [build_export_index()]).}
-#'     \item{origin_map}{Named character vector mapping `"pkg::fun"` keys
+#'     \item{origin_map}{Environment mapping `"pkg::fun"` keys
 #'       to origin packages (from [build_origin_map()]).}
 #'     \item{pkg_versions}{Named list mapping package names to version
 #'       strings.}
@@ -37,13 +37,27 @@ build_universe_data <- function(packages) {
     packages
   )
 
-  list(
-    packages = packages,
-    exports = exports,
-    export_index = export_index,
-    origin_map = origin_map,
-    pkg_versions = pkg_versions
+  structure(
+    list(
+      packages = packages,
+      exports = exports,
+      export_index = export_index,
+      origin_map = origin_map,
+      pkg_versions = pkg_versions
+    ),
+    class = "ascribe_universe"
   )
+}
+
+#' @export
+print.ascribe_universe <- function(x, ...) {
+  cli::cli_text("<ascribe_universe>")
+  for (pkg in x$packages) {
+    n <- length(x$exports[[pkg]])
+    label <- if (n == 1L) "indexed function" else "indexed functions"
+    cli::cli_bullets(c("*" = "{pkg}: {n} {label}"))
+  }
+  invisible(x)
 }
 
 #' Generate sysdata.rda for a package universe
@@ -58,7 +72,7 @@ build_universe_data <- function(packages) {
 #'   \item{`.{prefix}_pkgs`}{Character vector of package names.}
 #'   \item{`.{prefix}_exports`}{Named list of exported functions per package.}
 #'   \item{`.{prefix}_export_index`}{Inverted index: function name to packages.}
-#'   \item{`.{prefix}_origin_map`}{Named character vector: `"pkg::fun"` to origin.}
+#'   \item{`.{prefix}_origin_map`}{Environment: `"pkg::fun"` keys to origin.}
 #'   \item{`.{prefix}_pkg_versions`}{Named list of version strings.}
 #' }
 #'

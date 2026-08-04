@@ -41,7 +41,7 @@ The generated variables are:
 \item{\verb{.\{prefix\}_pkgs}}{Character vector of package names.}
 \item{\verb{.\{prefix\}_exports}}{Named list of exported functions per package.}
 \item{\verb{.\{prefix\}_export_index}}{Inverted index: function name to packages.}
-\item{\verb{.\{prefix\}_origin_map}}{Named character vector: \code{"pkg::fun"} to origin.}
+\item{\verb{.\{prefix\}_origin_map}}{Environment: \code{"pkg::fun"} keys to origin.}
 \item{\verb{.\{prefix\}_pkg_versions}}{Named list of version strings.}
 }
 
