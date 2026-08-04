@@ -25,7 +25,7 @@ pkgs <- candidate_pkgs[vapply(
 universe <- build_universe_data(pkgs)
 
 repos <- c("loo", "brms", "purrr", "posterior", "cmdstanr", "stanflow")
-repo_paths <- file.path("C:/Users/visru/Documents/Github", repos)
+repo_paths <- file.path("..", repos)
 
 for (path in repo_paths) {
   invisible(scan_usage(
