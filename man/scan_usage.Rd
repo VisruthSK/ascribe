@@ -6,9 +6,7 @@
 \usage{
 scan_usage(
   path = ".",
-  allowed_packages,
-  export_index,
-  origin_map,
+  universe,
   ignore_unqualified_functions = .stdlib_funs,
   strict = FALSE,
   skip_dirs = .scan_skip_dirs,
@@ -20,13 +18,7 @@ scan_usage(
 \item{path}{A single project directory (searched recursively) or a vector of
 files (.R/.Rmd/.qmd).}
 
-\item{allowed_packages}{Character vector of package namespaces to attribute
-calls to.}
-
-\item{export_index}{Named list mapping function names to packages.}
-
-\item{origin_map}{Environment mapping \code{pkg::fun} keys to the origin package,
-as returned by \code{\link[=build_origin_map]{build_origin_map()}}.}
+\item{universe}{A universe returned by \code{\link[=build_universe_data]{build_universe_data()}}.}
 
 \item{ignore_unqualified_functions}{Defaults to exports from base R packages
 listed in \code{stdlib_funs()}. Character vector of function names to ignore when
@@ -79,12 +71,7 @@ writeLines(
   ),
   path
 )
-scan_usage(
-  path,
-  allowed_packages = c("stats", "utils"),
-  export_index = list(filter = "stats"),
-  origin_map = list2env(list("stats::filter" = "stats"), parent = emptyenv()),
-  ignore_unqualified_functions = character()
-)
+universe <- build_universe_data(c("stats", "utils"))
+scan_usage(path, universe, ignore_unqualified_functions = character())
 unlink(path)
 }

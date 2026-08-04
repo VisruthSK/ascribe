@@ -6,9 +6,7 @@ test_that("cite_usage builds citations from a package universe", {
   universe <- build_universe_data("stats")
   usage <- scan_usage(
     path,
-    universe$packages,
-    universe$export_index,
-    universe$origin_map,
+    universe,
     ignore_unqualified_functions = character()
   )
   citations <- cite_usage(
@@ -66,9 +64,7 @@ test_that("cite_usage can return BibTeX and report no citations", {
     cite_usage(
       scan_usage(
         path,
-        "stats",
-        list(),
-        new.env(parent = emptyenv())
+        test_universe("stats")
       ),
       format = "bibtex"
     ),
@@ -109,12 +105,7 @@ test_that("cite_usage deduplicates citations for scanned usage", {
   writeLines("stats::median(1:3)", path)
 
   universe <- build_universe_data(c("stats", "tools"))
-  usage <- scan_usage(
-    path,
-    universe$packages,
-    universe$export_index,
-    universe$origin_map
-  )
+  usage <- scan_usage(path, universe)
   citations <- cite_usage(usage, format = "bibentry")
   expect_length(citations, 1L)
 })

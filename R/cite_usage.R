@@ -19,12 +19,7 @@
 #' path <- tempfile(fileext = ".R")
 #' writeLines("cli::cli_alert_info('hi'); fastmatch::fmatch(1, 1:5)", path)
 #' universe <- build_universe_data(c("cli", "fastmatch"))
-#' usage <- scan_usage(
-#'   path,
-#'   universe$packages,
-#'   universe$export_index,
-#'   universe$origin_map
-#' )
+#' usage <- scan_usage(path, universe)
 #' cite_usage(usage)
 #' unlink(path)
 cite_usage <- function(

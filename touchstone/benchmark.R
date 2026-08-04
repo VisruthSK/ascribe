@@ -30,9 +30,7 @@ repo_paths <- file.path("..", repos)
 for (path in repo_paths) {
   invisible(scan_usage(
     path = path,
-    allowed_packages = universe$packages,
-    export_index = universe$export_index,
-    origin_map = universe$origin_map,
+    universe = universe,
     strict = FALSE
   ))
 }

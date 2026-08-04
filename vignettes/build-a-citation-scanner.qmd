@@ -52,10 +52,8 @@ writeLines(
 )
 
 usage <- scan_usage(
-  path = project,
-  allowed_packages = universe$packages,
-  export_index = universe$export_index,
-  origin_map = universe$origin_map,
+  project,
+  universe,
   strict = TRUE
 )
 

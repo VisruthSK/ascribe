@@ -8,6 +8,26 @@ test_that("stdlib_funs and scan_skip_dirs return precomputed vectors", {
   expect_true("renv" %in% ssd)
 })
 
+test_that("scan_usage accepts a package universe", {
+  tmp <- tempfile(fileext = ".R")
+  on.exit(unlink(tmp), add = TRUE)
+  writeLines("stats::median(1:3)", tmp)
+
+  universe <- build_universe_data("stats")
+
+  expect_equal(
+    scan_usage(tmp, universe),
+    structure(
+      list(
+        packages = "stats",
+        functions = "stats::median",
+        ambiguous = character()
+      ),
+      class = "scan_usage"
+    )
+  )
+})
+
 test_that("scan_usage detects library attachments and namespaced calls", {
   tmp <- tempfile(fileext = ".R")
   on.exit(unlink(tmp), add = TRUE)
@@ -23,11 +43,13 @@ test_that("scan_usage detects library attachments and namespaced calls", {
 
   res <- scan_usage(
     path = tmp,
-    allowed_packages = c("stats", "utils"),
-    export_index = list(filter = "stats", head = "utils"),
-    origin_map = list2env(
-      list("stats::filter" = "stats", "utils::head" = "utils"),
-      parent = emptyenv()
+    universe = test_universe(
+      c("stats", "utils"),
+      list(filter = "stats", head = "utils"),
+      list2env(
+        list("stats::filter" = "stats", "utils::head" = "utils"),
+        parent = emptyenv()
+      )
     ),
     ignore_unqualified_functions = character()
   )
@@ -64,11 +86,13 @@ test_that("scan_usage parses Rmd and Qmd code chunks natively", {
 
   res <- scan_usage(
     path = tmp,
-    allowed_packages = "stats",
-    export_index = list(median = "stats", filter = "stats"),
-    origin_map = list2env(
-      list("stats::median" = "stats", "stats::filter" = "stats"),
-      parent = emptyenv()
+    universe = test_universe(
+      "stats",
+      list(median = "stats", filter = "stats"),
+      list2env(
+        list("stats::median" = "stats", "stats::filter" = "stats"),
+        parent = emptyenv()
+      )
     )
   )
 
@@ -84,11 +108,10 @@ test_that("scan_usage returns empty for Rmd without code fences", {
 
   res <- scan_usage(
     path = tmp,
-    allowed_packages = "stats",
-    export_index = list(median = "stats"),
-    origin_map = list2env(
-      list("stats::median" = "stats"),
-      parent = emptyenv()
+    universe = test_universe(
+      "stats",
+      list(median = "stats"),
+      list2env(list("stats::median" = "stats"), parent = emptyenv())
     )
   )
 
@@ -112,11 +135,10 @@ test_that("scan_usage works with use_knitr = TRUE", {
 
   res <- scan_usage(
     path = tmp,
-    allowed_packages = "stats",
-    export_index = list(median = "stats"),
-    origin_map = list2env(
-      list("stats::median" = "stats"),
-      parent = emptyenv()
+    universe = test_universe(
+      "stats",
+      list(median = "stats"),
+      list2env(list("stats::median" = "stats"), parent = emptyenv())
     ),
     use_knitr = TRUE
   )
@@ -152,11 +174,13 @@ test_that("use_knitr = TRUE resolves child documents", {
   scan <- function(use_knitr) {
     scan_usage(
       path = parent,
-      allowed_packages = c("stats", "utils"),
-      export_index = list(median = "stats", head = "utils"),
-      origin_map = list2env(
-        list("stats::median" = "stats", "utils::head" = "utils"),
-        parent = emptyenv()
+      universe = test_universe(
+        c("stats", "utils"),
+        list(median = "stats", head = "utils"),
+        list2env(
+          list("stats::median" = "stats", "utils::head" = "utils"),
+          parent = emptyenv()
+        )
       ),
       ignore_unqualified_functions = character(),
       use_knitr = use_knitr
@@ -188,11 +212,10 @@ test_that("use_knitr = TRUE resolves children of a file that names no package", 
 
   res <- scan_usage(
     path = parent,
-    allowed_packages = "stats",
-    export_index = list(median = "stats"),
-    origin_map = list2env(
-      list("stats::median" = "stats"),
-      parent = emptyenv()
+    universe = test_universe(
+      "stats",
+      list(median = "stats"),
+      list2env(list("stats::median" = "stats"), parent = emptyenv())
     ),
     ignore_unqualified_functions = character(),
     use_knitr = TRUE
@@ -215,11 +238,10 @@ test_that("scan_usage handles metapackages correctly", {
 
   res <- scan_usage(
     path = tmp,
-    allowed_packages = "real_pkg",
-    export_index = list(foo = "real_pkg"),
-    origin_map = list2env(
-      list("real_pkg::foo" = "real_pkg"),
-      parent = emptyenv()
+    universe = test_universe(
+      "real_pkg",
+      list(foo = "real_pkg"),
+      list2env(list("real_pkg::foo" = "real_pkg"), parent = emptyenv())
     ),
     metapackages = list(meta_pkg = "real_pkg"),
     ignore_unqualified_functions = character()
@@ -245,14 +267,16 @@ test_that("scan_usage handles strict mode on ambiguous calls", {
   expect_error(
     scan_usage(
       path = tmp,
-      allowed_packages = c("pkgA", "pkgB"),
-      export_index = list(ambiguous_fun = c("pkgA", "pkgB")),
-      origin_map = list2env(
-        list(
-          "pkgA::ambiguous_fun" = "pkgA",
-          "pkgB::ambiguous_fun" = "pkgB"
-        ),
-        parent = emptyenv()
+      universe = test_universe(
+        c("pkgA", "pkgB"),
+        list(ambiguous_fun = c("pkgA", "pkgB")),
+        list2env(
+          list(
+            "pkgA::ambiguous_fun" = "pkgA",
+            "pkgB::ambiguous_fun" = "pkgB"
+          ),
+          parent = emptyenv()
+        )
       ),
       ignore_unqualified_functions = character(),
       strict = TRUE
@@ -264,14 +288,16 @@ test_that("scan_usage handles strict mode on ambiguous calls", {
   expect_warning(
     res <- scan_usage(
       path = tmp,
-      allowed_packages = c("pkgA", "pkgB"),
-      export_index = list(ambiguous_fun = c("pkgA", "pkgB")),
-      origin_map = list2env(
-        list(
-          "pkgA::ambiguous_fun" = "pkgA",
-          "pkgB::ambiguous_fun" = "pkgB"
-        ),
-        parent = emptyenv()
+      universe = test_universe(
+        c("pkgA", "pkgB"),
+        list(ambiguous_fun = c("pkgA", "pkgB")),
+        list2env(
+          list(
+            "pkgA::ambiguous_fun" = "pkgA",
+            "pkgB::ambiguous_fun" = "pkgB"
+          ),
+          parent = emptyenv()
+        )
       ),
       ignore_unqualified_functions = character(),
       strict = FALSE
@@ -298,9 +324,7 @@ test_that("scan_usage errors on invalid inputs and path combinations", {
   expect_error(
     scan_usage(
       path = c(tmp1, tmp_dir),
-      allowed_packages = "stats",
-      export_index = list(),
-      origin_map = new.env(parent = emptyenv())
+      universe = test_universe("stats")
     ),
     "must be a single directory or a vector of files"
   )
@@ -312,9 +336,7 @@ test_that("scan_usage errors on invalid inputs and path combinations", {
   expect_error(
     scan_usage(
       path = empty_dir,
-      allowed_packages = "stats",
-      export_index = list(),
-      origin_map = new.env(parent = emptyenv())
+      universe = test_universe("stats")
     ),
     "No files found"
   )
@@ -326,9 +348,7 @@ test_that("scan_usage errors on invalid inputs and path combinations", {
   expect_error(
     scan_usage(
       path = tmp_txt,
-      allowed_packages = "stats",
-      export_index = list(),
-      origin_map = new.env(parent = emptyenv())
+      universe = test_universe("stats")
     ),
     "Unsupported file extension"
   )
@@ -347,9 +367,7 @@ test_that("scan_usage skips specified directories when scanning directory", {
 
   res <- scan_usage(
     path = tmp_dir,
-    allowed_packages = c("stats", "utils"),
-    export_index = list(),
-    origin_map = new.env(parent = emptyenv()),
+    universe = test_universe(c("stats", "utils")),
     skip_dirs = "renv"
   )
 
@@ -365,9 +383,7 @@ test_that("scan_usage handles syntax errors gracefully with warning", {
   expect_warning(
     res <- scan_usage(
       path = tmp,
-      allowed_packages = "stats",
-      export_index = list(),
-      origin_map = new.env(parent = emptyenv())
+      universe = test_universe("stats")
     ),
     "Failed to parse"
   )
@@ -396,11 +412,10 @@ test_that("an unparseable chunk does not discard the rest of an Rmd", {
   expect_warning(
     res <- scan_usage(
       path = tmp,
-      allowed_packages = "stats",
-      export_index = list(median = "stats"),
-      origin_map = list2env(
-        list("stats::median" = "stats"),
-        parent = emptyenv()
+      universe = test_universe(
+        "stats",
+        list(median = "stats"),
+        list2env(list("stats::median" = "stats"), parent = emptyenv())
       ),
       ignore_unqualified_functions = character()
     ),
@@ -426,11 +441,10 @@ test_that("scan_usage handles member calls, slot calls, and use() calls", {
 
   res <- scan_usage(
     path = tmp,
-    allowed_packages = "stats",
-    export_index = list(filter = "stats"),
-    origin_map = list2env(
-      list("stats::filter" = "stats"),
-      parent = emptyenv()
+    universe = test_universe(
+      "stats",
+      list(filter = "stats"),
+      list2env(list("stats::filter" = "stats"), parent = emptyenv())
     )
   )
 
@@ -445,18 +459,14 @@ test_that("scan_usage returns empty results when allowed_packages is empty or no
 
   res <- scan_usage(
     path = tmp,
-    allowed_packages = "stats",
-    export_index = list(),
-    origin_map = new.env(parent = emptyenv())
+    universe = test_universe("stats")
   )
   expect_equal(res$packages, character())
   expect_equal(res$functions, character())
 
   res_empty_allowed <- scan_usage(
     path = tmp,
-    allowed_packages = character(),
-    export_index = list(),
-    origin_map = new.env(parent = emptyenv())
+    universe = test_universe(character())
   )
   expect_equal(res_empty_allowed$packages, character())
 })
@@ -494,9 +504,7 @@ test_that("full coverage tests for all scan_usage.R branches", {
 
   res_nested <- scan_usage(
     path = nested_dir,
-    allowed_packages = "stats",
-    export_index = list(),
-    origin_map = new.env(parent = emptyenv())
+    universe = test_universe("stats")
   )
   expect_true("stats" %in% res_nested$packages)
 
@@ -900,9 +908,11 @@ test_that("full coverage for .scan_dir_files skip_dirs and .extract_code skip_pa
   on.exit(unlink(tmp_4arg), add = TRUE)
   res_4arg <- scan_usage(
     tmp_4arg,
-    allowed_packages = "pkgA",
-    export_index = list(myfun = "pkgA"),
-    origin_map = list2env(list("pkgA::myfun" = "pkgA"), parent = emptyenv())
+    test_universe(
+      "pkgA",
+      list(myfun = "pkgA"),
+      list2env(list("pkgA::myfun" = "pkgA"), parent = emptyenv())
+    )
   )
   expect_true("pkgA::myfun" %in% res_4arg$functions)
 
@@ -969,9 +979,7 @@ test_that("package universes of 200, 500, and 1,000 packages scale chunked regex
 
     res <- scan_usage(
       path = tmp,
-      allowed_packages = pkgs,
-      export_index = export_idx,
-      origin_map = new.env(parent = emptyenv())
+      universe = test_universe(pkgs, export_idx)
     )
     expect_true("pkg999" %in% res$packages)
     expect_true("pkg999::myfun" %in% res$functions)
@@ -986,9 +994,7 @@ test_that(".extract_code reads empty files", {
 
   res_empty <- scan_usage(
     path = tmp_empty,
-    allowed_packages = "stats",
-    export_index = list(),
-    origin_map = new.env(parent = emptyenv())
+    universe = test_universe("stats")
   )
   expect_equal(res_empty$packages, character())
 })
@@ -1000,11 +1006,13 @@ test_that("scanner results are identical before and after cleanup", {
 
   res <- scan_usage(
     path = tmp,
-    allowed_packages = c("stats", "utils"),
-    export_index = list(median = "stats", head = "utils"),
-    origin_map = list2env(
-      list("stats::median" = "stats", "utils::head" = "utils"),
-      parent = emptyenv()
+    universe = test_universe(
+      c("stats", "utils"),
+      list(median = "stats", head = "utils"),
+      list2env(
+        list("stats::median" = "stats", "utils::head" = "utils"),
+        parent = emptyenv()
+      )
     ),
     ignore_unqualified_functions = character()
   )

@@ -15,11 +15,7 @@
 #'
 #' @param path A single project directory (searched recursively) or a vector of
 #'   files (.R/.Rmd/.qmd).
-#' @param allowed_packages Character vector of package namespaces to attribute
-#'   calls to.
-#' @param export_index Named list mapping function names to packages.
-#' @param origin_map Environment mapping `pkg::fun` keys to the origin package,
-#'   as returned by [build_origin_map()].
+#' @param universe A universe returned by [build_universe_data()].
 #' @param ignore_unqualified_functions Defaults to exports from base R packages
 #'   listed in `stdlib_funs()`. Character vector of function names to ignore when
 #'   attributing (unqualified) calls. Calls like `pkg::fun()` will NOT be ignored
@@ -50,25 +46,22 @@
 #'   ),
 #'   path
 #' )
-#' scan_usage(
-#'   path,
-#'   allowed_packages = c("stats", "utils"),
-#'   export_index = list(filter = "stats"),
-#'   origin_map = list2env(list("stats::filter" = "stats"), parent = emptyenv()),
-#'   ignore_unqualified_functions = character()
-#' )
+#' universe <- build_universe_data(c("stats", "utils"))
+#' scan_usage(path, universe, ignore_unqualified_functions = character())
 #' unlink(path)
 scan_usage <- function(
   path = ".",
-  allowed_packages,
-  export_index,
-  origin_map,
+  universe,
   ignore_unqualified_functions = .stdlib_funs,
   strict = FALSE,
   skip_dirs = .scan_skip_dirs,
   metapackages = NULL,
   use_knitr = FALSE
 ) {
+  allowed_packages <- universe$packages
+  export_index <- universe$export_index
+  origin_map <- universe$origin_map
+
   resolver_index <- .scan_resolver_index(export_index, origin_map)
   metapackages <- .normalize_metapackages(metapackages, allowed_packages)
   export_names <- names(export_index)

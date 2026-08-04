@@ -95,9 +95,7 @@ for (repo in repos) {
       n = n,
       loo := scan_usage(
         path = !!repo_path,
-        allowed_packages = universe$packages,
-        export_index = universe$export_index,
-        origin_map = universe$origin_map,
+        universe = universe,
         strict = FALSE
       )
     )
@@ -106,9 +104,7 @@ for (repo in repos) {
       n = n,
       loo_knitr := scan_usage(
         path = !!repo_path,
-        allowed_packages = universe$packages,
-        export_index = universe$export_index,
-        origin_map = universe$origin_map,
+        universe = universe,
         strict = FALSE,
         use_knitr = TRUE
       )
@@ -119,9 +115,7 @@ for (repo in repos) {
       n = n,
       !!dir := scan_usage(
         path = !!repo_path,
-        allowed_packages = universe$packages,
-        export_index = universe$export_index,
-        origin_map = universe$origin_map,
+        universe = universe,
         strict = FALSE
       )
     )
