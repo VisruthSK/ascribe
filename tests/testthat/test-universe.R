@@ -15,9 +15,16 @@ test_that("build_universe_data builds complete scanner data structure", {
   expect_true(exists("stats::median", envir = data$origin_map))
   expect_named(data$pkg_versions, pkgs)
 
+  print_data <- structure(
+    list(
+      packages = c("pkgA", "pkgB"),
+      exports = list(pkgA = c("foo", "bar"), pkgB = "baz")
+    ),
+    class = "ascribe_universe"
+  )
   old_handler <- options(cli.default_handler = NULL)
   on.exit(options(old_handler), add = TRUE)
-  expect_snapshot(print(data))
+  expect_snapshot(print(print_data))
 })
 
 test_that("build_universe_data aborts if package is missing", {

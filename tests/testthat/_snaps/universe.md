@@ -1,9 +1,9 @@
 # build_universe_data builds complete scanner data structure
 
     Code
-      print(data)
+      print(print_data)
     Message
       <ascribe_universe>
-      * stats: 464 indexed functions
-      * utils: 262 indexed functions
+      * pkgA: 2 indexed functions
+      * pkgB: 1 indexed function
 
