@@ -5,7 +5,7 @@
 #' needed by [scan_usage()]. All packages must be installed.
 #'
 #' @param packages Character vector of package names.
-#' @return A named list with components:
+#' @return An `ascribe_universe` object with components:
 #'   \describe{
 #'     \item{packages}{The input package names.}
 #'     \item{exports}{Named list mapping package names to character
@@ -37,13 +37,27 @@ build_universe_data <- function(packages) {
     packages
   )
 
-  list(
-    packages = packages,
-    exports = exports,
-    export_index = export_index,
-    origin_map = origin_map,
-    pkg_versions = pkg_versions
+  structure(
+    list(
+      packages = packages,
+      exports = exports,
+      export_index = export_index,
+      origin_map = origin_map,
+      pkg_versions = pkg_versions
+    ),
+    class = "ascribe_universe"
   )
+}
+
+#' @export
+print.ascribe_universe <- function(x, ...) {
+  cli::cli_text("<ascribe_universe>")
+  for (pkg in x$packages) {
+    n <- length(x$exports[[pkg]])
+    label <- if (n == 1L) "indexed function" else "indexed functions"
+    cli::cli_bullets(c("*" = "{pkg}: {n} {label}"))
+  }
+  invisible(x)
 }
 
 #' Generate sysdata.rda for a package universe

@@ -2,6 +2,7 @@ test_that("build_universe_data builds complete scanner data structure", {
   pkgs <- c("stats", "utils")
   data <- build_universe_data(pkgs)
 
+  expect_s3_class(data, "ascribe_universe")
   expect_named(
     data,
     c("packages", "exports", "export_index", "origin_map", "pkg_versions")
@@ -13,6 +14,10 @@ test_that("build_universe_data builds complete scanner data structure", {
   expect_true("median" %in% names(data$export_index))
   expect_true(exists("stats::median", envir = data$origin_map))
   expect_named(data$pkg_versions, pkgs)
+
+  old_handler <- options(cli.default_handler = NULL)
+  on.exit(options(old_handler), add = TRUE)
+  expect_snapshot(print(data))
 })
 
 test_that("build_universe_data aborts if package is missing", {

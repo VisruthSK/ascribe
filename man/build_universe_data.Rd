@@ -10,7 +10,7 @@ build_universe_data(packages)
 \item{packages}{Character vector of package names.}
 }
 \value{
-A named list with components:
+An \code{ascribe_universe} object with components:
 \describe{
 \item{packages}{The input package names.}
 \item{exports}{Named list mapping package names to character
