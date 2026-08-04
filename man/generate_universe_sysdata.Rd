@@ -9,7 +9,7 @@ generate_universe_sysdata(
   prefix,
   extra_vars = list(),
   include_scanner_defaults = FALSE,
-  file = "R/sysdata.rda"
+  file
 )
 }
 \arguments{
@@ -24,7 +24,7 @@ the saved file (e.g., citation environments).}
 \item{include_scanner_defaults}{If \code{TRUE}, also saves \code{.stdlib_funs}
 and \code{.scan_skip_dirs}. Defaults to \code{FALSE}.}
 
-\item{file}{Output path. Defaults to \code{"R/sysdata.rda"}.}
+\item{file}{Output path (required).}
 }
 \value{
 Invisibly returns the result of \code{\link[=build_universe_data]{build_universe_data()}}.
