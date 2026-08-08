@@ -186,12 +186,9 @@ scan_usage <- function(
     }
     entries <- chartr("\\", "/", entries)
 
-    is_source_file <- grepl("\\.(R|Rmd|Qmd)$", entries, ignore.case = TRUE)
-    maybe_dir_idx <- which(!is_source_file)
-    is_dir <- logical(length(entries))
-    if (length(maybe_dir_idx)) {
-      is_dir[maybe_dir_idx] <- dir.exists(entries[maybe_dir_idx])
-    }
+    is_dir <- dir.exists(entries)
+    is_source_file <- !is_dir &
+      grepl("\\.(R|Rmd|Qmd)$", entries, ignore.case = TRUE)
 
     sub_dirs <- entries[is_dir]
     files <- entries[is_source_file]

@@ -24,8 +24,8 @@ collect_pkg_funs <- function(pkg) {
 
 #' Collect R6 class method names from a package
 #'
-#' Scans namespace-internal objects for R6 class generators, then collects
-#' all public method names.
+#' Scans exported and namespace-internal objects for R6 class generators,
+#' then collects all public method names.
 #'
 #' @param pkg Package name (character scalar).
 #' @return Character vector of R6 method names.
@@ -33,7 +33,7 @@ collect_pkg_funs <- function(pkg) {
 collect_r6_methods <- function(pkg) {
   ns <- asNamespace(pkg)
 
-  ls(ns, all.names = TRUE) |>
+  namespace_r6 <- ls(ns, all.names = TRUE) |>
     Filter(
       \(name) {
         obj <- get0(name, envir = ns, inherits = FALSE)
@@ -41,7 +41,29 @@ collect_r6_methods <- function(pkg) {
       },
       x = _
     ) |>
-    lapply(\(class_name) get0(class_name, envir = ns, inherits = FALSE)) |>
+    lapply(\(class_name) get0(class_name, envir = ns, inherits = FALSE))
+
+  exported_r6 <- getNamespaceExports(ns) |>
+    Filter(
+      \(name) {
+        obj <- tryCatch(
+          getExportedValue(ns, name),
+          error = function(e) NULL
+        )
+        inherits(obj, "R6ClassGenerator")
+      },
+      x = _
+    ) |>
+    lapply(
+      \(class_name) {
+        tryCatch(
+          getExportedValue(ns, class_name),
+          error = function(e) NULL
+        )
+      }
+    )
+
+  c(namespace_r6, exported_r6) |>
     lapply(\(gen) if (!is.null(gen)) names(gen$public_methods)) |>
     unlist(use.names = FALSE) |>
     as.character() |>

@@ -144,3 +144,91 @@ test_that("collect_pkg_funs, resolve_origin, and build_origin_map handle pure re
   omap <- build_origin_map(exports)
   expect_equal(omap[["ascribetestdownstream::foo"]], "ascribetestupstream")
 })
+
+test_that("collect_pkg_funs finds methods of pure re-exported R6 classes", {
+  skip_if_not_installed("R6")
+  tmp_lib <- tempfile()
+  dir.create(tmp_lib)
+
+  up_dir <- tempfile()
+  dir.create(file.path(up_dir, "R"), recursive = TRUE)
+  writeLines(
+    paste0(
+      "SomeClass <- R6::R6Class(\"SomeClass\", public = list(",
+      "method = function() \"upstream\"))"
+    ),
+    file.path(up_dir, "R", "some_class.R")
+  )
+  writeLines(
+    c(
+      "Package: ascribetestupstreamr6",
+      "Version: 0.0.1",
+      "Title: Test Helper for Ascribe R6 Re-export Handling",
+      "Description: Minimal upstream package for testing R6 re-export detection.",
+      "Author: Ascribe Tests",
+      "Maintainer: Ascribe Tests <tests@ascribe.test>",
+      "License: MIT",
+      "Imports: R6"
+    ),
+    file.path(up_dir, "DESCRIPTION")
+  )
+  writeLines("export(SomeClass)", file.path(up_dir, "NAMESPACE"))
+
+  down_dir <- tempfile()
+  dir.create(file.path(down_dir, "R"), recursive = TRUE)
+  writeLines("NULL", file.path(down_dir, "R", "dummy.R"))
+  writeLines(
+    c(
+      "Package: ascribetestdownstreamr6",
+      "Version: 0.0.1",
+      "Title: Test Helper for Ascribe R6 Re-export Handling",
+      "Description: Minimal downstream package for testing R6 re-export detection.",
+      "Author: Ascribe Tests",
+      "Maintainer: Ascribe Tests <tests@ascribe.test>",
+      "License: MIT",
+      "Imports: ascribetestupstreamr6"
+    ),
+    file.path(down_dir, "DESCRIPTION")
+  )
+  writeLines(
+    c("importFrom(ascribetestupstreamr6, SomeClass)", "export(SomeClass)"),
+    file.path(down_dir, "NAMESPACE")
+  )
+
+  old_lib <- .libPaths()
+  on.exit(
+    {
+      if (isNamespaceLoaded("ascribetestdownstreamr6")) {
+        unloadNamespace("ascribetestdownstreamr6")
+      }
+      if (isNamespaceLoaded("ascribetestupstreamr6")) {
+        unloadNamespace("ascribetestupstreamr6")
+      }
+      .libPaths(old_lib)
+      unlink(c(tmp_lib, up_dir, down_dir), recursive = TRUE)
+    },
+    add = TRUE
+  )
+
+  .libPaths(c(tmp_lib, old_lib))
+  utils::install.packages(
+    up_dir,
+    repos = NULL,
+    type = "source",
+    lib = tmp_lib,
+    quiet = TRUE
+  )
+  utils::install.packages(
+    down_dir,
+    repos = NULL,
+    type = "source",
+    lib = tmp_lib,
+    quiet = TRUE
+  )
+
+  ns <- asNamespace("ascribetestdownstreamr6")
+  expect_false(exists("SomeClass", envir = ns, inherits = FALSE))
+
+  expect_true("method" %in% collect_r6_methods("ascribetestdownstreamr6"))
+  expect_true("method" %in% collect_pkg_funs("ascribetestdownstreamr6"))
+})
