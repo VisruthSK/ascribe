@@ -37,7 +37,12 @@ cite_usage <- function(
 
   entries <- c(
     lapply(unique(c(pkgs, "base")), \(pkg) {
-      entry <- get0(pkg, envir = package_citations, ifnotfound = NULL)
+      entry <- get0(
+        pkg,
+        envir = package_citations,
+        inherits = FALSE,
+        ifnotfound = NULL
+      )
       if (is.null(entry)) {
         if (pkg == "base") utils::citation("base") else package_citation(pkg)
       } else {
@@ -45,7 +50,7 @@ cite_usage <- function(
       }
     }),
     lapply(usage$functions, \(fun) {
-      get0(fun, envir = function_citations, ifnotfound = NULL)
+      get0(fun, envir = function_citations, inherits = FALSE, ifnotfound = NULL)
     })
   ) |>
     Filter(Negate(is.null), x = _) |>

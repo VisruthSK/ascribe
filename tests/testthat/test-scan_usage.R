@@ -868,6 +868,17 @@ test_that(".scan_resolver_index handles empty provider list, missing origin map,
   origin_map <- list2env(list("pkgA::multi" = "originA"), parent = emptyenv())
   res_map <- .scan_resolver_index(idx_multi, origin_map)
   expect_equal(res_map$multi$origin, c("originA", "pkgB"))
+
+  with_parent <- list2env(
+    list("pkgA::multi" = "originA"),
+    parent = list2env(
+      list("pkgA::single" = "originParent"),
+      parent = emptyenv()
+    )
+  )
+  res_parent <- .scan_resolver_index(idx_multi, with_parent)
+  expect_equal(res_parent$single$origin, "pkgA")
+  expect_equal(res_parent$multi$origin, c("originA", "pkgB"))
 })
 
 test_that("full coverage for .scan_dir_files skip_dirs and .extract_code skip_pattern", {

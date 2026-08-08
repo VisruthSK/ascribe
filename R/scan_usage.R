@@ -820,7 +820,7 @@ scan_usage <- function(
   res <- vector("list", n_funs)
 
   get_map_val <- function(key) {
-    get0(key, envir = origin_map, ifnotfound = NULL)
+    get0(key, envir = origin_map, inherits = FALSE, ifnotfound = NULL)
   }
 
   # Single provider functions (>95% of cases)

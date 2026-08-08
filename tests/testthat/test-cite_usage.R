@@ -130,6 +130,95 @@ test_that("cite_usage uses custom base citation override when base is not in pac
   expect_true(any(grepl("Custom Base", bibtex, fixed = TRUE)))
 })
 
+test_that("cite_usage ignores package citations inherited from parent environments", {
+  parent <- new.env(parent = emptyenv())
+  parent$stats <- utils::bibentry(
+    bibtype = "Manual",
+    key = "stats-parent",
+    title = "Parent Stats",
+    author = "P",
+    year = "2026"
+  )
+  overrides <- new.env(parent = parent, hash = TRUE)
+
+  fallback <- utils::bibentry(
+    bibtype = "Manual",
+    key = "stats-fallback",
+    title = "Fallback Stats",
+    author = "F",
+    year = "2026"
+  )
+  citations <- cite_usage(
+    structure(
+      list(packages = "stats", functions = character()),
+      class = "scan_usage"
+    ),
+    package_citations = overrides,
+    package_citation = function(pkg) fallback,
+    format = "bibentry"
+  )
+  bibtex <- utils::toBibtex(citations)
+  expect_false(any(grepl("Parent Stats", bibtex, fixed = TRUE)))
+  expect_true(any(grepl("Fallback Stats", bibtex, fixed = TRUE)))
+})
+
+test_that("cite_usage ignores function citations inherited from parent environments", {
+  parent <- new.env(parent = emptyenv())
+  parent[["stats::median"]] <- utils::bibentry(
+    bibtype = "Manual",
+    key = "median-parent",
+    title = "Parent Median",
+    author = "P",
+    year = "2026"
+  )
+  fun_overrides <- new.env(parent = parent, hash = TRUE)
+  citations <- cite_usage(
+    structure(
+      list(packages = character(), functions = "stats::median"),
+      class = "scan_usage"
+    ),
+    function_citations = fun_overrides,
+    format = "bibentry"
+  )
+  bibtex <- utils::toBibtex(citations)
+  expect_false(any(grepl("Parent Median", bibtex, fixed = TRUE)))
+})
+
+test_that("cite_usage ignores missing override keys inherited from parent environments", {
+  parent_pkg <- new.env(parent = emptyenv())
+  parent_pkg$stats <- utils::bibentry(
+    bibtype = "Manual",
+    key = "parent-pkg",
+    title = "Parent Package Override",
+    author = "P",
+    year = "2026"
+  )
+  pkg_overrides <- new.env(parent = parent_pkg, hash = TRUE)
+
+  parent_fun <- new.env(parent = emptyenv())
+  parent_fun[["stats::median"]] <- utils::bibentry(
+    bibtype = "Manual",
+    key = "parent-fun",
+    title = "Parent Function Override",
+    author = "P",
+    year = "2026"
+  )
+  fun_overrides <- new.env(parent = parent_fun, hash = TRUE)
+
+  citations <- cite_usage(
+    structure(
+      list(packages = "stats", functions = "stats::median"),
+      class = "scan_usage"
+    ),
+    package_citations = pkg_overrides,
+    function_citations = fun_overrides,
+    format = "bibentry"
+  )
+  bibtex <- utils::toBibtex(citations)
+  expect_false(any(grepl("Parent Package Override", bibtex, fixed = TRUE)))
+  expect_false(any(grepl("Parent Function Override", bibtex, fixed = TRUE)))
+})
+
 test_that("cite_usage handles environment-based citations and fallback branches", {
   pkg_env <- list2env(
     list(

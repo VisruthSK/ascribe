@@ -34,37 +34,31 @@ collect_r6_methods <- function(pkg) {
   ns <- asNamespace(pkg)
 
   namespace_r6 <- ls(ns, all.names = TRUE) |>
-    Filter(
+    lapply(
       \(name) {
-        obj <- get0(name, envir = ns, inherits = FALSE)
-        inherits(obj, "R6ClassGenerator")
-      },
-      x = _
+        obj <- tryCatch(
+          get0(name, envir = ns, inherits = FALSE),
+          error = function(e) NULL
+        )
+        if (inherits(obj, "R6ClassGenerator")) obj else NULL
+      }
     ) |>
-    lapply(\(class_name) get0(class_name, envir = ns, inherits = FALSE))
+    Filter(Negate(is.null), x = _)
 
   exported_r6 <- getNamespaceExports(ns) |>
-    Filter(
+    lapply(
       \(name) {
         obj <- tryCatch(
           getExportedValue(ns, name),
           error = function(e) NULL
         )
-        inherits(obj, "R6ClassGenerator")
-      },
-      x = _
-    ) |>
-    lapply(
-      \(class_name) {
-        tryCatch(
-          getExportedValue(ns, class_name),
-          error = function(e) NULL
-        )
+        if (inherits(obj, "R6ClassGenerator")) obj else NULL
       }
-    )
+    ) |>
+    Filter(Negate(is.null), x = _)
 
   c(namespace_r6, exported_r6) |>
-    lapply(\(gen) if (!is.null(gen)) names(gen$public_methods)) |>
+    lapply(\(gen) names(gen$public_methods)) |>
     unlist(use.names = FALSE) |>
     as.character() |>
     (\(methods) methods[!is.na(methods) & nzchar(methods)])() |>
