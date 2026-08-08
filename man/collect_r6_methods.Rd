@@ -13,7 +13,7 @@ collect_r6_methods(pkg)
 Character vector of R6 method names.
 }
 \description{
-Scans namespace-internal objects for R6 class generators, then collects
-all public method names.
+Scans exported and namespace-internal objects for R6 class generators,
+then collects all public method names.
 }
 \keyword{internal}

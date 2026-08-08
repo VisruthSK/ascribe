@@ -804,7 +804,7 @@ test_that("full coverage tests for all scan_usage.R branches", {
       expect_error(
         .extract_code(
           tmp_rmd,
-          skip_pattern = "\\b(stats)\\b",
+          skip_patterns = "\\b(stats)\\b",
           use_knitr = TRUE
         ),
         "Package knitr is required"
@@ -818,7 +818,7 @@ test_that("full coverage tests for all scan_usage.R branches", {
     on.exit(unlink(tmp_rmd_knitr), add = TRUE)
     res_knitr_code <- .extract_code(
       tmp_rmd_knitr,
-      skip_pattern = "\\b(stats)\\b",
+      skip_patterns = "\\b(stats)\\b",
       use_knitr = TRUE
     )
     expect_match(res_knitr_code, "library(stats)", fixed = TRUE)
@@ -895,12 +895,12 @@ test_that("full coverage for .scan_dir_files skip_dirs and .extract_code skip_pa
   tmp_r <- tempfile(fileext = ".R")
   writeLines("x <- 1", tmp_r)
   on.exit(unlink(tmp_r), add = TRUE)
-  expect_equal(.extract_code(tmp_r, skip_pattern = "nonexistent_pkg"), "")
+  expect_equal(.extract_code(tmp_r, skip_patterns = "nonexistent_pkg"), "")
 
   tmp_rmd <- tempfile(fileext = ".Rmd")
   writeLines("```{r}\nx <- 1\n```", tmp_rmd)
   on.exit(unlink(tmp_rmd), add = TRUE)
-  expect_equal(.extract_code(tmp_rmd, skip_pattern = "nonexistent_pkg"), "")
+  expect_equal(.extract_code(tmp_rmd, skip_patterns = "nonexistent_pkg"), "")
 
   # 4-arg function call to trigger n > 3L AST loop
   tmp_4arg <- tempfile(fileext = ".R")
@@ -965,6 +965,44 @@ test_that(".scan_dir_files preserves exact file ordering, empty skip_dirs, and h
 
   deep_files <- .scan_dir_files(tmp_dir, skip_dirs = character(0))
   expect_true(norm_deep_file %in% deep_files)
+})
+
+test_that("directories ending in source file suffixes are traversed, not scanned as files", {
+  tmp_dir <- tempfile("dir_suffix_")
+  dir.create(tmp_dir)
+  on.exit(unlink(tmp_dir, recursive = TRUE), add = TRUE)
+
+  analysis_dir <- file.path(tmp_dir, "analysis.R")
+  dir.create(analysis_dir)
+  writeLines("library(stats)", file.path(analysis_dir, "actual.R"))
+  writeLines("library(utils)", file.path(tmp_dir, "keep.R"))
+
+  files <- .scan_dir_files(tmp_dir, skip_dirs = character(0))
+  expect_true(any(grepl("actual\\.R$", files)))
+  expect_false(any(grepl("analysis\\.R$", files)))
+
+  res <- scan_usage(
+    path = tmp_dir,
+    universe = test_universe(c("stats", "utils"))
+  )
+  expect_true("stats" %in% res$packages)
+  expect_true("utils" %in% res$packages)
+})
+
+test_that("Rmd and Qmd directories are traversed, not treated as files", {
+  tmp_dir <- tempfile("doc_dir_suffix_")
+  dir.create(tmp_dir)
+  on.exit(unlink(tmp_dir, recursive = TRUE), add = TRUE)
+
+  for (suffix in c("Rmd", "Qmd")) {
+    doc_dir <- file.path(tmp_dir, paste0("docs.", suffix))
+    dir.create(doc_dir)
+    writeLines("library(stats)", file.path(doc_dir, "actual.R"))
+  }
+
+  files <- .scan_dir_files(tmp_dir, skip_dirs = character(0))
+  expect_length(files, 2L)
+  expect_true(all(grepl("actual\\.R$", files)))
 })
 
 test_that("package universes of 200, 500, and 1,000 packages scale chunked regex prefilter", {
