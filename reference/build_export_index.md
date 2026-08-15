@@ -31,13 +31,13 @@ exports <- list(
   pkgB = c("foo", "baz")
 )
 build_export_index(exports)
+#> $foo
+#> [1] "pkgA" "pkgB"
+#> 
 #> $bar
 #> [1] "pkgA"
 #> 
 #> $baz
 #> [1] "pkgB"
-#> 
-#> $foo
-#> [1] "pkgA" "pkgB"
 #> 
 ```

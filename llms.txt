@@ -24,7 +24,7 @@ Build a package universe, then cite the code that uses it:
 library(ascribe)
 
 universe <- build_universe_data("stats")
-usage <- scan_usage(path, universe$packages, universe$export_index, universe$origin_map)
+usage <- scan_usage(path, universe)
 cite_usage(usage)
 ```
 

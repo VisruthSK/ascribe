@@ -64,7 +64,7 @@ The generated variables are:
 
 - `.{prefix}_origin_map`:
 
-  Named character vector: `"pkg::fun"` to origin.
+  Environment: `"pkg::fun"` keys to origin.
 
 - `.{prefix}_pkg_versions`:
 
@@ -78,6 +78,6 @@ When `include_scanner_defaults` is `TRUE`, `.stdlib_funs` and
 ``` r
 file <- tempfile(fileext = ".rda")
 generate_universe_sysdata(c("stats", "utils"), "my", file = file)
-#> ✔ Successfully generated /tmp/RtmpqDpaL0/file1a911ed64201.rda
+#> ✔ Successfully generated /tmp/RtmpRwEiHE/file19c216fb9b6b.rda
 unlink(file)
 ```

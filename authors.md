@@ -11,13 +11,13 @@ Source:
 [`DESCRIPTION`](https://github.com/VisruthSK/ascribe/blob/main/DESCRIPTION)
 
 Srimath Kandali V (2026). *ascribe: Static Detection and Citation of R
-Package and Function Usage*. R package version 0.1.1,
+Package and Function Usage*. R package version 0.2.0,
 <https://ascribe.visruth.com>.
 
     @Manual{,
       title = {ascribe: Static Detection and Citation of R Package and Function Usage},
       author = {Visruth {Srimath Kandali}},
       year = {2026},
-      note = {R package version 0.1.1},
+      note = {R package version 0.2.0},
       url = {https://ascribe.visruth.com},
     }

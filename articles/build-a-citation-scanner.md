@@ -52,20 +52,17 @@ writeLines(
 )
 
 usage <- scan_usage(
-  path = project,
-  allowed_packages = universe$packages,
-  export_index = universe$export_index,
-  origin_map = universe$origin_map,
-  strict = TRUE,
-  quiet = TRUE
+  project,
+  universe,
+  strict = TRUE
 )
 
 usage
 unlink(project, recursive = TRUE)
 ```
 
-`strict = TRUE` warns on and omits calls that cannot be resolved
-unambiguously.
+`strict = TRUE` aborts on calls that cannot be resolved unambiguously;
+the default, `strict = FALSE`, warns and omits them instead.
 
 ## Generate citations
 

@@ -11,15 +11,12 @@ calls. It recognizes [`library()`](https://rdrr.io/r/base/library.html),
 ``` r
 scan_usage(
   path = ".",
-  allowed_packages,
-  export_index,
-  origin_map,
+  universe,
   ignore_unqualified_functions = .stdlib_funs,
   strict = FALSE,
   skip_dirs = .scan_skip_dirs,
   metapackages = NULL,
-  use_knitr = FALSE,
-  quiet = FALSE
+  use_knitr = FALSE
 )
 ```
 
@@ -30,17 +27,10 @@ scan_usage(
   A single project directory (searched recursively) or a vector of files
   (.R/.Rmd/.qmd).
 
-- allowed_packages:
+- universe:
 
-  Character vector of package namespaces to attribute calls to.
-
-- export_index:
-
-  Named list mapping function names to packages.
-
-- origin_map:
-
-  Named character vector mapping `pkg::fun` keys to the origin package.
+  A universe returned by
+  [`build_universe_data()`](https://ascribe.visruth.com/reference/build_universe_data.md).
 
 - ignore_unqualified_functions:
 
@@ -71,13 +61,10 @@ scan_usage(
 - use_knitr:
 
   Logical. If `TRUE`, parse `.Rmd` and `.qmd` files with
-  [`knitr::purl()`](https://rdrr.io/pkg/knitr/man/knit.html). This is
-  more accurate for knitr/quarto chunk handling but much slower than the
-  default in-house parser. Defaults to `FALSE`.
-
-- quiet:
-
-  Logical. If `TRUE`, suppresses status messages. Defaults to `FALSE`.
+  [`knitr::purl()`](https://rdrr.io/pkg/knitr/man/knit.html), which
+  resolves knitr features the in-house parser ignores, such as `child`
+  documents. It also comments out `eval=FALSE` and `purl=FALSE` chunks,
+  so usage in them goes unrecorded. Defaults to `FALSE`.
 
 ## Value
 
@@ -114,14 +101,9 @@ writeLines(
   ),
   path
 )
-scan_usage(
-  path,
-  allowed_packages = c("stats", "utils"),
-  export_index = list(filter = "stats"),
-  origin_map = c("stats::filter" = "stats"),
-  ignore_unqualified_functions = character(),
-  quiet = TRUE
-)
+universe <- build_universe_data(c("stats", "utils"))
+scan_usage(path, universe, ignore_unqualified_functions = character())
+#> ℹ Searching /tmp/RtmpRwEiHE/file19c24195db31.R
 #> $packages
 #> [1] "stats" "utils"
 #> 
