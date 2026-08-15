@@ -10,14 +10,14 @@ build_universe_data(packages)
 \item{packages}{Character vector of package names.}
 }
 \value{
-A named list with components:
+An \code{ascribe_universe} object with components:
 \describe{
 \item{packages}{The input package names.}
 \item{exports}{Named list mapping package names to character
 vectors of exported function names (from \code{\link[=collect_pkg_funs]{collect_pkg_funs()}}).}
 \item{export_index}{Named list mapping function names to
 character vectors of packages (from \code{\link[=build_export_index]{build_export_index()}}).}
-\item{origin_map}{Named character vector mapping \code{"pkg::fun"} keys
+\item{origin_map}{Environment mapping \code{"pkg::fun"} keys
 to origin packages (from \code{\link[=build_origin_map]{build_origin_map()}}).}
 \item{pkg_versions}{Named list mapping package names to version
 strings.}

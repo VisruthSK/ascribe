@@ -6,8 +6,8 @@
 \usage{
 cite_usage(
   usage,
-  package_citations = list(),
-  function_citations = list(),
+  package_citations = new.env(parent = emptyenv(), hash = TRUE),
+  function_citations = new.env(parent = emptyenv(), hash = TRUE),
   package_citation = utils::citation,
   always_cite = character(),
   format = c("bibtex", "bibentry")
@@ -16,11 +16,11 @@ cite_usage(
 \arguments{
 \item{usage}{Results returned by \code{\link[=scan_usage]{scan_usage()}}.}
 
-\item{package_citations}{A named list or environment of package citation
-entries. Missing packages use \code{package_citation}.}
+\item{package_citations}{An environment of package citation entries. Missing
+packages use \code{package_citation}.}
 
-\item{function_citations}{A named list or environment of function citation
-entries, keyed by \code{"pkg::function"}.}
+\item{function_citations}{An environment of function citation entries,
+keyed by \code{"pkg::function"}.}
 
 \item{package_citation}{A function that accepts a package name and returns
 its citation entries. Defaults to \code{\link[utils:citation]{utils::citation()}}.}
@@ -39,9 +39,9 @@ their own citation records and package-citation policy.
 }
 \examples{
 path <- tempfile(fileext = ".R")
-writeLines("stats::median(1:3)", path)
-universe <- build_universe_data(c("stats", "tools"))
-usage <- scan_usage(path, universe$packages, universe$export_index, universe$origin_map)
+writeLines("cli::cli_alert_info('hi'); fastmatch::fmatch(1, 1:5)", path)
+universe <- build_universe_data(c("cli", "fastmatch"))
+usage <- scan_usage(path, universe)
 cite_usage(usage)
 unlink(path)
 }

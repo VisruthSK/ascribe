@@ -4,19 +4,16 @@
 \alias{collect_r6_methods}
 \title{Collect R6 class method names from a package}
 \usage{
-collect_r6_methods(pkg, export_names)
+collect_r6_methods(pkg)
 }
 \arguments{
 \item{pkg}{Package name (character scalar).}
-
-\item{export_names}{Character vector of exported names (from
-\code{\link[=getNamespaceExports]{getNamespaceExports()}}).}
 }
 \value{
 Character vector of R6 method names.
 }
 \description{
-Scans both exported objects and namespace-internal objects for
-R6 class generators, then collects all public method names.
+Scans exported and namespace-internal objects for R6 class generators,
+then collects all public method names.
 }
 \keyword{internal}
