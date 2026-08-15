@@ -13,6 +13,6 @@
 * The in-house Rmd/qmd parser now keeps usage from chunks that parse even when another chunk in the same file fails, instead of dropping the whole file.
 * `scan_usage()` is much faster and uses far less memory.
 
-# ascribe 0.0.0.9000
+# ascribe 0.1.1
 
 * Initial CRAN submission.

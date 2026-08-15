@@ -1,10 +1,8 @@
-## Resubmission
-
-Made `generate_universe_sysdata()`'s `file` argument, which previously defaulted to `R\sysdata.rda`, a mandatory argument.
-
 ## R CMD check results
 
 0 errors | 0 warnings | 1 note
 
-* This is a new release.
+* checking for non-standard things in the check directory ... NOTE
+  Found the following files/directories:
+  ''NULL''
 
