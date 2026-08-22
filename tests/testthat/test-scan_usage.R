@@ -946,6 +946,7 @@ test_that("full coverage for .scan_dir_files skip_dirs and .extract_code skip_pa
 })
 
 test_that(".scan_dir_files preserves exact file ordering, empty skip_dirs, and handles deep trees", {
+  testthat::skip_on_cran()
   tmp_dir <- tempfile("order_dir_")
   dir.create(tmp_dir)
   on.exit(unlink(tmp_dir, recursive = TRUE), add = TRUE)
