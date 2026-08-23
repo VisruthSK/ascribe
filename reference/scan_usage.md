@@ -103,7 +103,7 @@ writeLines(
 )
 universe <- build_universe_data(c("stats", "utils"))
 scan_usage(path, universe, ignore_unqualified_functions = character())
-#> ℹ Searching /tmp/RtmpRwEiHE/file19c24195db31.R
+#> ℹ Searching /tmp/Rtmpy2zKxX/file1b0122b608fc.R
 #> $packages
 #> [1] "stats" "utils"
 #> 

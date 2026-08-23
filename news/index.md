@@ -2,6 +2,8 @@
 
 ## ascribe 0.2.0
 
+CRAN release: 2026-08-22
+
 ### Breaking changes
 
 - [`scan_usage()`](https://ascribe.visruth.com/reference/scan_usage.md)
@@ -26,6 +28,8 @@
 - [`scan_usage()`](https://ascribe.visruth.com/reference/scan_usage.md)
   is much faster and uses far less memory.
 
-## ascribe 0.0.0.9000
+## ascribe 0.1.1
+
+CRAN release: 2026-08-08
 
 - Initial CRAN submission.

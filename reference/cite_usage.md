@@ -61,7 +61,7 @@ path <- tempfile(fileext = ".R")
 writeLines("cli::cli_alert_info('hi'); fastmatch::fmatch(1, 1:5)", path)
 universe <- build_universe_data(c("cli", "fastmatch"))
 usage <- scan_usage(path, universe)
-#> ℹ Searching /tmp/RtmpRwEiHE/file19c27fa8a36e.R
+#> ℹ Searching /tmp/Rtmpy2zKxX/file1b011e849414.R
 cite_usage(usage)
 #> @Manual{,
 #>   title = {cli: Helpers for Developing Command Line Interfaces},
