@@ -8,7 +8,6 @@ vignette: >
 
 ```{r}
 #| include: false
-#| eval: false
 library(ascribe)
 ```
 
@@ -21,7 +20,6 @@ For a complete, real-world implementation of a package citation scanner built wi
 `build_universe_data()` extracts exported functions, R6 methods, and origin mappings for re-exported functions.
 
 ```{r}
-#| eval: false
 stan_pkgs <- c("cmdstanr", "posterior", "bayesplot", "rstan")
 universe <- build_universe_data(stan_pkgs)
 names(universe)
@@ -34,7 +32,6 @@ Run `build_universe_data()` in an environment where all target packages are inst
 `scan_usage()` inspects `.R`, `.Rmd`, and `.qmd` files for package attachments (`library()`, `require()`) and function calls (`pkg::fun()` or unqualified calls resolved by attachment order).
 
 ```{r}
-#| eval: false
 project <- tempfile("stan-project-")
 dir.create(project)
 script <- file.path(project, "analysis.R")
@@ -68,12 +65,11 @@ unlink(project, recursive = TRUE)
 `cite_usage()` formats BibTeX entries for detected packages and functions.
 
 ```{r}
-#| eval: false
 citations <- cite_usage(usage)
 writeLines(citations)
 ```
 
-Override default package or function citations with `package_citations` and `function_citations`.
+Override default package or function citations with `package_citations` and `function_citations`. For the real `Stan` citations, see the `data-raw` directory in [`stanflow`](https://github.com/VisruthSK/stanflow/tree/main/data-raw).
 
 ## Save scanner data in sysdata.rda
 
