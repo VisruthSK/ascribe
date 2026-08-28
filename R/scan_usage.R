@@ -61,8 +61,7 @@ scan_usage <- function(
   allowed_packages <- universe$packages
   export_index <- universe$export_index
   origin_map <- universe$origin_map
-
-  resolver_index <- .scan_resolver_index(export_index, origin_map)
+  resolver_index <- universe$resolver_index
   metapackages <- .normalize_metapackages(metapackages, allowed_packages)
   export_names <- names(export_index)
   if (is.null(export_names)) {
@@ -74,7 +73,8 @@ scan_usage <- function(
     use_heads = .scan_use_heads,
     ignore_heads = .scan_ignore_heads,
     export_names = export_names,
-    metapackages = metapackages
+    metapackages = metapackages,
+    walker_envs = universe$walker_envs
   )
 
   paths <- normalizePath(path, winslash = "/", mustWork = TRUE)
@@ -290,7 +290,8 @@ scan_usage <- function(
     ))
   }
 
-  code_raw <- .read_file_lf(file)
+  lines <- readLines(file, warn = FALSE)
+  code_raw <- paste(lines, collapse = "\n")
 
   if (ext == "r") {
     if (!.any_pattern_matches(skip_patterns, code_raw)) {
@@ -323,7 +324,7 @@ scan_usage <- function(
     knitr::purl(file, tmp, quiet = TRUE, documentation = 0)
     .read_file_lf(tmp)
   } else {
-    .extract_markdown_code(strsplit(code_raw, "\n", fixed = TRUE)[[1]])
+    .extract_markdown_code(lines)
   }
 }
 
@@ -533,33 +534,33 @@ scan_usage <- function(
   use_heads,
   ignore_heads,
   export_names,
-  metapackages
+  metapackages,
+  walker_envs = NULL
 ) {
-  make_env <- function(vec, value = TRUE) {
-    if (!length(vec)) {
-      return(new.env(parent = emptyenv(), hash = TRUE))
+  if (!is.null(walker_envs)) {
+    allowed_pkgs_env <- walker_envs$allowed_pkgs_env
+  } else {
+    make_env <- function(vec, value = TRUE) {
+      if (!length(vec)) {
+        return(new.env(parent = emptyenv(), hash = TRUE))
+      }
+      vals <- rep.int(list(value), length(vec))
+      names(vals) <- vec
+      list2env(vals, parent = emptyenv(), hash = TRUE)
     }
-    vals <- rep.int(list(value), length(vec))
-    names(vals) <- vec
-    list2env(vals, parent = emptyenv(), hash = TRUE)
+    allowed_pkgs_env <- make_env(allowed_packages)
   }
 
-  allowed_pkgs_env <- make_env(allowed_packages)
-  export_names_env <- make_env(export_names)
-
-  head_kind_env <- make_env(
-    setdiff(export_names, ignore_unqualified_functions),
-    6L
-  )
-  head_kind_env[["::"]] <- 2L
-  head_kind_env[[":::"]] <- 2L
-  head_kind_env[["library"]] <- 3L
-  head_kind_env[["require"]] <- 3L
-  head_kind_env[["requireNamespace"]] <- 4L
-  head_kind_env[["use"]] <- 5L
-  for (nm in ignore_heads) {
-    head_kind_env[[nm]] <- 1L
-  }
+  # Fast lookup vectors for walker
+  unqual_funs_vec <- setdiff(export_names, ignore_unqualified_functions)
+  special_heads <- new.env(parent = emptyenv(), hash = TRUE)
+  special_heads[["::"]] <- 2L
+  special_heads[[":::"]] <- 2L
+  special_heads[["library"]] <- 3L
+  special_heads[["require"]] <- 3L
+  special_heads[["requireNamespace"]] <- 4L
+  special_heads[["use"]] <- 5L
+  ignore_heads_vec <- ignore_heads
 
   walk <- function(x, acc) {
     if (is.null(x)) {
@@ -573,7 +574,20 @@ scan_usage <- function(
 
       if (is.symbol(head)) {
         head_name <- as.character(head)
-        kind <- head_kind_env[[head_name]]
+
+        # Fast lookup: check special heads first
+        kind <- special_heads[[head_name]]
+        if (is.null(kind)) {
+          # Check if it's an ignored head
+          if (!is.na(fastmatch::fmatch(head_name, ignore_heads_vec))) {
+            kind <- 1L
+          } else {
+            # Check if it's an unqualified exported function
+            if (!is.na(fastmatch::fmatch(head_name, unqual_funs_vec))) {
+              kind <- 6L
+            }
+          }
+        }
         if (is.null(kind) || kind == 1L) {
           # Not in the export index, or a language keyword/operator/subset.
         } else if (kind == 6L) {
@@ -636,7 +650,7 @@ scan_usage <- function(
         member_fun <- .ast_member_fun(head)
         if (
           !is.null(member_fun) &&
-            !is.null(export_names_env[[member_fun]])
+            !is.na(fastmatch::fmatch(member_fun, export_names))
         ) {
           acc$unqual_funs <- c(acc$unqual_funs, member_fun)
           acc$unqual_visit_idx <- c(acc$unqual_visit_idx, acc$visit_idx)

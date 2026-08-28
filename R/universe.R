@@ -31,6 +31,14 @@ build_universe_data <- function(packages) {
   exports <- stats::setNames(lapply(packages, collect_pkg_funs), packages)
   export_index <- build_export_index(exports)
   origin_map <- build_origin_map(exports)
+  resolver_index <- .scan_resolver_index(export_index, origin_map)
+
+  # Pre-build walker environments for reuse
+  export_names <- names(export_index)
+  if (is.null(export_names)) {
+    export_names <- character()
+  }
+  walker_envs <- .make_walker_envs(packages, export_names)
 
   pkg_versions <- stats::setNames(
     lapply(packages, \(p) as.character(utils::packageVersion(p))),
@@ -43,6 +51,8 @@ build_universe_data <- function(packages) {
       exports = exports,
       export_index = export_index,
       origin_map = origin_map,
+      resolver_index = resolver_index,
+      walker_envs = walker_envs,
       pkg_versions = pkg_versions
     ),
     class = "ascribe_universe"
@@ -107,6 +117,8 @@ generate_universe_sysdata <- function(
   vars[[paste0(".", prefix, "_exports")]] <- data$exports
   vars[[paste0(".", prefix, "_export_index")]] <- data$export_index
   vars[[paste0(".", prefix, "_origin_map")]] <- data$origin_map
+  vars[[paste0(".", prefix, "_resolver_index")]] <- data$resolver_index
+  vars[[paste0(".", prefix, "_walker_envs")]] <- data$walker_envs
   vars[[paste0(".", prefix, "_pkg_versions")]] <- data$pkg_versions
 
   if (include_scanner_defaults) {
@@ -130,4 +142,21 @@ generate_universe_sysdata <- function(
 
   cli::cli_alert_success("Successfully generated {.file {file}}")
   invisible(data)
+}
+
+#' @keywords internal
+.make_walker_envs <- function(allowed_packages, export_names) {
+  make_env <- function(vec, value = TRUE) {
+    if (!length(vec)) {
+      return(new.env(parent = emptyenv(), hash = TRUE))
+    }
+    vals <- rep.int(list(value), length(vec))
+    names(vals) <- vec
+    list2env(vals, parent = emptyenv(), hash = TRUE)
+  }
+
+  list(
+    allowed_pkgs_env = make_env(allowed_packages),
+    export_names_env = make_env(export_names)
+  )
 }

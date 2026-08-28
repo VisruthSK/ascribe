@@ -5,7 +5,15 @@ test_that("build_universe_data builds complete scanner data structure", {
   expect_s3_class(data, "ascribe_universe")
   expect_named(
     data,
-    c("packages", "exports", "export_index", "origin_map", "pkg_versions")
+    c(
+      "packages",
+      "exports",
+      "export_index",
+      "origin_map",
+      "resolver_index",
+      "walker_envs",
+      "pkg_versions"
+    )
   )
   expect_equal(data$packages, pkgs)
   expect_named(data$exports, pkgs)
@@ -14,6 +22,9 @@ test_that("build_universe_data builds complete scanner data structure", {
   expect_true("median" %in% names(data$export_index))
   expect_true(exists("stats::median", envir = data$origin_map))
   expect_named(data$pkg_versions, pkgs)
+  expect_type(data$resolver_index, "list")
+  expect_type(data$walker_envs, "list")
+  expect_named(data$walker_envs, c("allowed_pkgs_env", "export_names_env"))
 
   print_data <- structure(
     list(
@@ -51,7 +62,15 @@ test_that("generate_universe_sysdata saves prefixed objects to sysdata.rda", {
 
   expect_named(
     res,
-    c("packages", "exports", "export_index", "origin_map", "pkg_versions")
+    c(
+      "packages",
+      "exports",
+      "export_index",
+      "origin_map",
+      "resolver_index",
+      "walker_envs",
+      "pkg_versions"
+    )
   )
   expect_true(file.exists(tmp_file))
 
@@ -63,6 +82,8 @@ test_that("generate_universe_sysdata saves prefixed objects to sysdata.rda", {
   expect_true(exists(".test_export_index", envir = env))
   expect_true(exists(".test_origin_map", envir = env))
   expect_true(exists(".test_pkg_versions", envir = env))
+  expect_true(exists(".test_resolver_index", envir = env))
+  expect_true(exists(".test_walker_envs", envir = env))
   expect_true(exists(".stdlib_funs", envir = env))
   expect_true(exists(".scan_skip_dirs", envir = env))
   expect_true(exists(".test_extra", envir = env))
