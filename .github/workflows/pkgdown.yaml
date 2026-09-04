@@ -32,6 +32,7 @@ jobs:
           use-public-rspm: true
           extra-repositories: |
             https://community.r-multiverse.org
+            https://visruthsk.r-universe.dev
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
