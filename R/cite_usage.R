@@ -13,6 +13,8 @@
 #' @param always_cite Character vector of packages to cite in addition to the
 #'   packages found by the scan.
 #' @param format One of `"bibtex"` or `"bibentry"`.
+#' @param cite_r Whether to include an automatic R base citation. Defaults
+#'   to `TRUE`.
 #' @return A BibTeX character vector or a bibentry object.
 #' @export
 #' @examples
@@ -21,6 +23,7 @@
 #' universe <- build_universe_data(c("cli", "fastmatch"))
 #' usage <- scan_usage(path, universe)
 #' cite_usage(usage)
+#' cite_usage(usage, cite_r = FALSE)
 #' unlink(path)
 cite_usage <- function(
   usage,
@@ -28,15 +31,17 @@ cite_usage <- function(
   function_citations = new.env(parent = emptyenv(), hash = TRUE),
   package_citation = utils::citation,
   always_cite = character(),
-  format = c("bibtex", "bibentry")
+  format = c("bibtex", "bibentry"),
+  cite_r = TRUE
 ) {
   pkgs <- unique(c(usage$packages, always_cite))
   if (!length(pkgs) && !length(usage$functions)) {
     return(character())
   }
 
+  base_pkgs <- if (cite_r) "base" else character()
   entries <- c(
-    lapply(unique(c(pkgs, "base")), \(pkg) {
+    lapply(unique(c(pkgs, base_pkgs)), \(pkg) {
       entry <- get0(
         pkg,
         envir = package_citations,

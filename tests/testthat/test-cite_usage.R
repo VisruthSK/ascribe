@@ -287,3 +287,44 @@ test_that("cite_usage handles environment-based citations and fallback branches"
     character()
   )
 })
+
+test_that("cite_usage cite_r parameter controls automatic R base citation", {
+  usage <- structure(
+    list(packages = "cli", functions = character()),
+    class = "scan_usage"
+  )
+
+  # Use a non-base package to avoid utils::citation returning R citation
+  with_cite_r <- cite_usage(
+    usage,
+    cite_r = TRUE,
+    package_citation = function(pkg) utils::citation(pkg),
+    format = "bibentry"
+  )
+  bibtex_with <- utils::toBibtex(with_cite_r)
+  expect_true(any(grepl("R Core Team", bibtex_with, fixed = TRUE)))
+
+  without_cite_r <- cite_usage(
+    usage,
+    cite_r = FALSE,
+    package_citation = function(pkg) utils::citation(pkg),
+    format = "bibentry"
+  )
+  bibtex_without <- utils::toBibtex(without_cite_r)
+  expect_false(any(grepl("R Core Team", bibtex_without, fixed = TRUE)))
+  expect_true(any(grepl("cli", bibtex_without, fixed = TRUE)))
+
+  # When base is explicitly in packages, it should still be cited
+  usage_with_base <- structure(
+    list(packages = c("cli", "base"), functions = character()),
+    class = "scan_usage"
+  )
+  explicit_base <- cite_usage(
+    usage_with_base,
+    cite_r = FALSE,
+    package_citation = function(pkg) utils::citation(pkg),
+    format = "bibentry"
+  )
+  bibtex_explicit <- utils::toBibtex(explicit_base)
+  expect_true(any(grepl("R Core Team", bibtex_explicit, fixed = TRUE)))
+})
