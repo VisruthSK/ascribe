@@ -10,7 +10,8 @@ cite_usage(
   function_citations = new.env(parent = emptyenv(), hash = TRUE),
   package_citation = utils::citation,
   always_cite = character(),
-  format = c("bibtex", "bibentry")
+  format = c("bibtex", "bibentry"),
+  cite_r = TRUE
 )
 }
 \arguments{
@@ -29,6 +30,9 @@ its citation entries. Defaults to \code{\link[utils:citation]{utils::citation()}
 packages found by the scan.}
 
 \item{format}{One of \code{"bibtex"} or \code{"bibentry"}.}
+
+\item{cite_r}{Whether to include an automatic R base citation. Defaults
+to \code{TRUE}.}
 }
 \value{
 A BibTeX character vector or a bibentry object.
@@ -43,5 +47,6 @@ writeLines("cli::cli_alert_info('hi'); fastmatch::fmatch(1, 1:5)", path)
 universe <- build_universe_data(c("cli", "fastmatch"))
 usage <- scan_usage(path, universe)
 cite_usage(usage)
+cite_usage(usage, cite_r = FALSE)
 unlink(path)
 }

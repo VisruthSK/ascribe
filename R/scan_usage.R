@@ -130,7 +130,8 @@ scan_usage <- function(
         metapackages = metapackages,
         walker = walker,
         file_path = file,
-        skip_patterns = if (is_r) NULL else skip_patterns
+        skip_patterns = if (is_r) NULL else skip_patterns,
+        explicit_only = !is.null(metapackages) && length(metapackages) > 0L
       )
     }
   )
@@ -433,7 +434,11 @@ scan_usage <- function(
   metapackages,
   walker,
   file_path,
-  skip_patterns = .build_skip_patterns(c(allowed_packages, names(metapackages)))
+  skip_patterns = .build_skip_patterns(c(
+    allowed_packages,
+    names(metapackages)
+  )),
+  explicit_only = FALSE
 ) {
   empty <- list(pkgs = character(), keys = character(), ambiguous = character())
   if (!any(nzchar(code))) {
@@ -482,6 +487,7 @@ scan_usage <- function(
   acc$lib_pkgs <- character()
   acc$lib_visit_idx <- integer()
   acc$lib_is_attach <- logical()
+  acc$lib_is_explicit <- logical()
   acc$ns_pkgs <- character()
   acc$ns_keys <- character()
   acc$unqual_funs <- character()
@@ -495,7 +501,8 @@ scan_usage <- function(
     list(
       visit_idx = acc$lib_visit_idx,
       pkg = acc$lib_pkgs,
-      is_attach = acc$lib_is_attach
+      is_attach = acc$lib_is_attach,
+      is_explicit = acc$lib_is_explicit
     )
   } else {
     NULL
@@ -516,8 +523,14 @@ scan_usage <- function(
     resolver_index = resolver_index
   )
 
+  explicit_pkgs <- if (explicit_only) {
+    lib_data$pkg[lib_data$is_explicit]
+  } else {
+    lib_data$pkg[lib_data$is_attach]
+  }
+
   list(
-    pkgs = c(acc$lib_pkgs, acc$ns_pkgs, resolved$pkgs),
+    pkgs = c(explicit_pkgs, acc$ns_pkgs, resolved$pkgs),
     keys = c(acc$ns_keys, resolved$keys),
     ambiguous = resolved$ambiguous
   )
@@ -593,25 +606,37 @@ scan_usage <- function(
           if (!is.null(pkg)) {
             is_allowed <- !is.null(allowed_pkgs_env[[pkg]])
             is_attach <- kind == 3L
+            is_metapkg <- !is.null(metapackages) &&
+              !is.null(metapackages[[pkg]])
 
-            if (is_allowed) {
+            if (is_allowed || is_metapkg) {
               acc$lib_pkgs <- c(acc$lib_pkgs, pkg)
               acc$lib_visit_idx <- c(acc$lib_visit_idx, acc$visit_idx)
               acc$lib_is_attach <- c(acc$lib_is_attach, is_attach)
+              acc$lib_is_explicit <- c(acc$lib_is_explicit, is_attach)
             }
 
             if (is_attach && !is.null(metapackages)) {
               expanded_pkgs <- metapackages[[pkg]]
               if (length(expanded_pkgs)) {
-                acc$lib_pkgs <- c(acc$lib_pkgs, expanded_pkgs)
-                acc$lib_visit_idx <- c(
-                  acc$lib_visit_idx,
-                  rep.int(acc$visit_idx, length(expanded_pkgs))
-                )
-                acc$lib_is_attach <- c(
-                  acc$lib_is_attach,
-                  rep.int(TRUE, length(expanded_pkgs))
-                )
+                allowed_expanded <- expanded_pkgs[
+                  !is.na(fastmatch::fmatch(expanded_pkgs, allowed_packages))
+                ]
+                if (length(allowed_expanded)) {
+                  acc$lib_pkgs <- c(acc$lib_pkgs, allowed_expanded)
+                  acc$lib_visit_idx <- c(
+                    acc$lib_visit_idx,
+                    rep.int(acc$visit_idx, length(allowed_expanded))
+                  )
+                  acc$lib_is_attach <- c(
+                    acc$lib_is_attach,
+                    rep.int(TRUE, length(allowed_expanded))
+                  )
+                  acc$lib_is_explicit <- c(
+                    acc$lib_is_explicit,
+                    rep.int(FALSE, length(allowed_expanded))
+                  )
+                }
               }
             }
           }
