@@ -795,7 +795,7 @@ test_that("full coverage tests for all scan_usage.R branches", {
   expect_equal(cand_res$pkgs, "pkgB")
 
   testthat::with_mocked_bindings(
-    requireNamespace = \(pkg, quietly) FALSE,
+    requireNamespace = function(pkg, quietly) FALSE,
     .package = "ascribe",
     {
       tmp_rmd <- tempfile(fileext = ".Rmd")
