@@ -247,8 +247,44 @@ test_that("scan_usage handles metapackages correctly", {
     ignore_unqualified_functions = character()
   )
 
+  expect_true("meta_pkg" %in% res$packages)
   expect_true("real_pkg" %in% res$packages)
   expect_true("real_pkg::foo" %in% res$functions)
+})
+
+test_that("scan_usage metapackage only reports explicitly attached and resolved packages", {
+  tmp <- tempfile(fileext = ".R")
+  on.exit(unlink(tmp), add = TRUE)
+  writeLines(
+    c(
+      "library(tidyverse)",
+      "filter(mtcars, cyl == 4)",
+      "ggplot2::ggplot(mtcars, aes(mpg, wt))"
+    ),
+    tmp
+  )
+
+  res <- scan_usage(
+    path = tmp,
+    universe = test_universe(
+      c("dplyr", "ggplot2", "tidyr", "readr"),
+      list(filter = "dplyr", ggplot = "ggplot2"),
+      list2env(
+        list("dplyr::filter" = "dplyr", "ggplot2::ggplot" = "ggplot2"),
+        parent = emptyenv()
+      )
+    ),
+    metapackages = list(tidyverse = c("dplyr", "ggplot2", "tidyr", "readr")),
+    ignore_unqualified_functions = character()
+  )
+
+  expect_true("tidyverse" %in% res$packages)
+  expect_true("dplyr" %in% res$packages)
+  expect_true("ggplot2" %in% res$packages)
+  expect_false("tidyr" %in% res$packages)
+  expect_false("readr" %in% res$packages)
+  expect_true("dplyr::filter" %in% res$functions)
+  expect_true("ggplot2::ggplot" %in% res$functions)
 })
 
 test_that("scan_usage handles strict mode on ambiguous calls", {
