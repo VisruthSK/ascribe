@@ -36,7 +36,7 @@ cite_usage <- function(
   }
 
   entries <- c(
-    lapply(unique(c(pkgs, "base")), \(pkg) {
+    lapply(unique(c(pkgs, "base")), function(pkg) {
       entry <- get0(
         pkg,
         envir = package_citations,
@@ -49,13 +49,12 @@ cite_usage <- function(
         entry
       }
     }),
-    lapply(usage$functions, \(fun) {
+    lapply(usage$functions, function(fun) {
       get0(fun, envir = function_citations, inherits = FALSE, ifnotfound = NULL)
     })
-  ) |>
-    Filter(Negate(is.null), x = _) |>
-    do.call(c, args = _) |>
-    unique()
+  )
+
+  entries <- unique(do.call(c, Filter(Negate(is.null), entries)))
 
   if (match.arg(format) == "bibentry") entries else utils::toBibtex(entries)
 }

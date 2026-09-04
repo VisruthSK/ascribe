@@ -93,7 +93,7 @@ scan_usage <- function(
     }
     lapply(
       paths,
-      \(file_path) cli::cli_alert_info("Searching {.path {file_path}}")
+      function(file_path) cli::cli_alert_info("Searching {.path {file_path}}")
     )
     paths
   }
@@ -116,7 +116,7 @@ scan_usage <- function(
 
   hits <- lapply(
     unique(files),
-    \(file) {
+    function(file) {
       code_str <- .extract_code(
         file,
         skip_patterns = skip_patterns,
@@ -215,11 +215,7 @@ scan_usage <- function(
 }
 
 .collect_unique <- function(hits, field) {
-  hits |>
-    lapply(`[[`, field) |>
-    unlist(use.names = FALSE) |>
-    unique() |>
-    sort()
+  sort(unique(unlist(lapply(hits, `[[`, field), use.names = FALSE)))
 }
 
 # Chunks pkgs into word-boundary alternation regexes (PCRE limits how many
@@ -238,7 +234,7 @@ scan_usage <- function(
   )
   vapply(
     chunks,
-    \(chk) {
+    function(chk) {
       escaped <- gsub("([][{}()+*^$|\\\\.?])", "\\\\\\1", chk)
       paste0("\\b(", paste(escaped, collapse = "|"), ")\\b")
     },
@@ -265,7 +261,9 @@ scan_usage <- function(
 
   lapply(
     metapackages,
-    \(pkgs) unique(pkgs[!is.na(fastmatch::fmatch(pkgs, allowed_packages))])
+    function(pkgs) {
+      unique(pkgs[!is.na(fastmatch::fmatch(pkgs, allowed_packages))])
+    }
   )
 }
 
@@ -279,9 +277,7 @@ scan_usage <- function(
   skip_patterns = NULL,
   use_knitr = FALSE
 ) {
-  ext <- file |>
-    sub(".*\\.", "", x = _) |>
-    tolower()
+  ext <- tolower(sub(".*\\.", "", file))
 
   if (!ext %in% c("r", "rmd", "qmd")) {
     cli::cli_abort(c(
@@ -457,7 +453,7 @@ scan_usage <- function(
       c,
       lapply(
         code,
-        \(chunk) {
+        function(chunk) {
           tryCatch(
             parse(text = chunk, keep.source = FALSE),
             error = function(e) NULL
@@ -913,7 +909,7 @@ scan_usage <- function(
     cbind,
     lapply(
       meta$provider,
-      \(pkg) {
+      function(pkg) {
         provider_rows <- attached_rows[[pkg]]
         hits <- findInterval(visit_idx, attached$visit_idx[provider_rows])
         out <- rep.int(-1L, length(visit_idx))
