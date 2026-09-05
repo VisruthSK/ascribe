@@ -1,0 +1,7 @@
+Package: ascribetestbroken
+Version: 0.0.1
+Title: Test Fixture for Ascribe Broken Namespace Handling
+Description: Minimal package with an erroring active binding.
+Authors@R: person("Ascribe", "Tests", email = "tests@ascribe.test", role = c("aut", "cre"))
+License: MIT
+Imports: R6

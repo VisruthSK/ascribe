@@ -1,0 +1,2 @@
+importFrom(ascribetestupstreamr6, ExportedClass)
+export(ExportedClass)
