@@ -33,7 +33,7 @@ build_universe_data <- function(packages) {
   origin_map <- build_origin_map(exports)
 
   pkg_versions <- stats::setNames(
-    lapply(packages, \(p) as.character(utils::packageVersion(p))),
+    lapply(packages, function(p) as.character(utils::packageVersion(p))),
     packages
   )
 

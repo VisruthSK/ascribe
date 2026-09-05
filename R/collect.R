@@ -11,15 +11,15 @@
 collect_pkg_funs <- function(pkg) {
   ns <- asNamespace(pkg)
 
-  getNamespaceExports(pkg) |>
+  unique(c(
     Filter(
-      \(x) {
+      function(x) {
         is.function(tryCatch(getExportedValue(ns, x), error = function(e) NULL))
       },
-      x = _
-    ) |>
-    c(collect_r6_methods(pkg)) |>
-    unique()
+      getNamespaceExports(pkg)
+    ),
+    collect_r6_methods(pkg)
+  ))
 }
 
 #' Collect R6 class method names from a package
@@ -33,36 +33,43 @@ collect_pkg_funs <- function(pkg) {
 collect_r6_methods <- function(pkg) {
   ns <- asNamespace(pkg)
 
-  namespace_r6 <- ls(ns, all.names = TRUE) |>
+  namespace_r6 <- Filter(
+    Negate(is.null),
     lapply(
-      \(name) {
+      ls(ns, all.names = TRUE),
+      function(name) {
         obj <- tryCatch(
           get0(name, envir = ns, inherits = FALSE),
           error = function(e) NULL
         )
         if (inherits(obj, "R6ClassGenerator")) obj else NULL
       }
-    ) |>
-    Filter(Negate(is.null), x = _)
+    )
+  )
 
-  exported_r6 <- getNamespaceExports(ns) |>
+  exported_r6 <- Filter(
+    Negate(is.null),
     lapply(
-      \(name) {
+      getNamespaceExports(ns),
+      function(name) {
         obj <- tryCatch(
           getExportedValue(ns, name),
           error = function(e) NULL
         )
         if (inherits(obj, "R6ClassGenerator")) obj else NULL
       }
-    ) |>
-    Filter(Negate(is.null), x = _)
+    )
+  )
 
-  c(namespace_r6, exported_r6) |>
-    lapply(\(gen) names(gen$public_methods)) |>
-    unlist(use.names = FALSE) |>
-    as.character() |>
-    (\(methods) methods[!is.na(methods) & nzchar(methods)])() |>
-    unique()
+  methods <- unlist(
+    lapply(
+      c(namespace_r6, exported_r6),
+      function(gen) names(gen$public_methods)
+    ),
+    use.names = FALSE
+  )
+  methods <- as.character(methods)
+  unique(methods[!is.na(methods) & nzchar(methods)])
 }
 
 .resolve_origin_ns <- function(ns, name) {
@@ -151,7 +158,9 @@ build_origin_map <- function(exports) {
 
   u_pkgs <- unique(all_pkgs)
   ns_list <- stats::setNames(
-    lapply(u_pkgs, \(p) tryCatch(asNamespace(p), error = function(e) NULL)),
+    lapply(u_pkgs, function(p) {
+      tryCatch(asNamespace(p), error = function(e) NULL)
+    }),
     u_pkgs
   )
 
