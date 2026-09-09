@@ -133,15 +133,7 @@ test_that("branch coverage for scan progress and resolver helpers", {
   makeActiveBinding("x", function() 1, active_ns)
   expect_equal(.resolve_origin_ns(active_ns, "x"), NA_character_)
   expect_null(.scan_resolver_index(list(foo = character()), NULL)$foo)
-  expect_equal(
-    ascribe:::.scan_resolver_index(list(foo = "a"), NULL)$foo$provider,
-    "a"
-  )
-  expect_equal(
-    ascribe:::.scan_resolver_index(list(foo = c("a", "b")), NULL)$foo$provider,
-    c("a", "b")
-  )
-  expect_identical(ascribe:::.scan_resolver_index(NULL, NULL), list())
+  expect_identical(build_universe_data(character())$resolver_index, list())
   expect_equal(
     .scan_resolver_index(list(foo = c("a", "b")), NULL)$foo$provider,
     c("a", "b")
