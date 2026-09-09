@@ -4,6 +4,6 @@
       print(print_data)
     Message
       <ascribe_universe>
-      * pkgA: 2 indexed functions
-      * pkgB: 1 indexed function
+      v Packages: 2
+      v Metapackages: 0
 

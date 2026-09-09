@@ -21,7 +21,9 @@ test_that("scan_usage accepts a package universe", {
       list(
         packages = "stats",
         functions = "stats::median",
-        ambiguous = character()
+        ambiguous = character(),
+        package_citations = universe$package_citations,
+        function_citations = universe$function_citations
       ),
       class = "scan_usage"
     )
@@ -241,9 +243,9 @@ test_that("scan_usage handles metapackages correctly", {
     universe = test_universe(
       "real_pkg",
       list(foo = "real_pkg"),
-      list2env(list("real_pkg::foo" = "real_pkg"), parent = emptyenv())
+      list2env(list("real_pkg::foo" = "real_pkg"), parent = emptyenv()),
+      list(meta_pkg = "real_pkg")
     ),
-    metapackages = list(meta_pkg = "real_pkg"),
     ignore_unqualified_functions = character()
   )
 
@@ -272,9 +274,9 @@ test_that("scan_usage metapackage only reports explicitly attached and resolved 
       list2env(
         list("dplyr::filter" = "dplyr", "ggplot2::ggplot" = "ggplot2"),
         parent = emptyenv()
-      )
+      ),
+      list(tidyverse = c("dplyr", "ggplot2", "tidyr", "readr"))
     ),
-    metapackages = list(tidyverse = c("dplyr", "ggplot2", "tidyr", "readr")),
     ignore_unqualified_functions = character()
   )
 

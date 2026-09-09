@@ -6,22 +6,25 @@
 \usage{
 cite_usage(
   usage,
-  package_citations = new.env(parent = emptyenv(), hash = TRUE),
-  function_citations = new.env(parent = emptyenv(), hash = TRUE),
+  package_citations = NULL,
+  function_citations = NULL,
   package_citation = utils::citation,
   always_cite = character(),
   format = c("bibtex", "bibentry"),
-  cite_r = TRUE
+  cite_r = TRUE,
+  universe = NULL
 )
 }
 \arguments{
-\item{usage}{Results returned by \code{\link[=scan_usage]{scan_usage()}}.}
+\item{usage}{Results returned by \code{\link[=scan_usage]{scan_usage()}} or \code{\link[=scan_code]{scan_code()}}.}
 
 \item{package_citations}{An environment of package citation entries. Missing
-packages use \code{package_citation}.}
+packages use \code{package_citation}. If \code{universe} is provided and this is \code{NULL},
+uses \code{universe$package_citations}. Explicit argument overrides universe.}
 
 \item{function_citations}{An environment of function citation entries,
-keyed by \code{"pkg::function"}.}
+keyed by \code{"pkg::function"}. If \code{universe} is provided and this is \code{NULL},
+uses \code{universe$function_citations}. Explicit argument overrides universe.}
 
 \item{package_citation}{A function that accepts a package name and returns
 its citation entries. Defaults to \code{\link[utils:citation]{utils::citation()}}.}
@@ -33,6 +36,10 @@ packages found by the scan.}
 
 \item{cite_r}{Whether to include an automatic R base citation. Defaults
 to \code{TRUE}.}
+
+\item{universe}{An \code{ascribe_universe} object returned by \code{\link[=build_universe_data]{build_universe_data()}}.
+If provided, citation mappings stored in the universe are used as defaults.
+Defaults to \code{NULL}.}
 }
 \value{
 A BibTeX character vector or a bibentry object.
