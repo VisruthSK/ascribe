@@ -11,15 +11,19 @@
 collect_pkg_funs <- function(pkg) {
   ns <- asNamespace(pkg)
 
-  unique(c(
-    Filter(
-      function(x) {
-        is.function(tryCatch(getExportedValue(ns, x), error = function(e) NULL))
-      },
-      getNamespaceExports(pkg)
-    ),
-    collect_r6_methods(pkg)
-  ))
+  exported_names <- getNamespaceExports(pkg)
+  exported_funs <- Filter(
+    function(x) {
+      if (exists(x, envir = ns, inherits = FALSE) && bindingIsActive(x, ns)) {
+        return(FALSE)
+      }
+      is.function(tryCatch(getExportedValue(ns, x), error = function(e) NULL))
+    },
+    exported_names
+  )
+
+  r6_methods <- collect_r6_methods(pkg)
+  unique(c(exported_funs, r6_methods))
 }
 
 #' Collect R6 class method names from a package
@@ -38,6 +42,12 @@ collect_r6_methods <- function(pkg) {
     lapply(
       ls(ns, all.names = TRUE),
       function(name) {
+        if (
+          exists(name, envir = ns, inherits = FALSE) &&
+            bindingIsActive(name, ns)
+        ) {
+          return(NULL)
+        }
         obj <- tryCatch(
           get0(name, envir = ns, inherits = FALSE),
           error = function(e) NULL
@@ -52,6 +62,12 @@ collect_r6_methods <- function(pkg) {
     lapply(
       getNamespaceExports(ns),
       function(name) {
+        if (
+          exists(name, envir = ns, inherits = FALSE) &&
+            bindingIsActive(name, ns)
+        ) {
+          return(NULL)
+        }
         obj <- tryCatch(
           getExportedValue(ns, name),
           error = function(e) NULL
@@ -74,6 +90,9 @@ collect_r6_methods <- function(pkg) {
 
 .resolve_origin_ns <- function(ns, name) {
   if (is.null(ns)) {
+    return(NA_character_)
+  }
+  if (exists(name, envir = ns, inherits = FALSE) && bindingIsActive(name, ns)) {
     return(NA_character_)
   }
   obj <- tryCatch(getExportedValue(ns, name), error = function(e) NULL)
@@ -153,6 +172,9 @@ build_export_index <- function(exports) {
 #' build_origin_map(exports)
 build_origin_map <- function(exports) {
   all_funs <- unlist(exports, use.names = FALSE)
+  if (length(all_funs) == 0L) {
+    return(new.env(parent = emptyenv(), hash = TRUE))
+  }
   all_pkgs <- rep(names(exports), lengths(exports))
   keys <- paste0(all_pkgs, "::", all_funs)
 
@@ -170,8 +192,29 @@ build_origin_map <- function(exports) {
 
   origins <- mapply(resolve_origin_fast, all_pkgs, all_funs, USE.NAMES = FALSE)
 
-  # If origin is undetermined (NA), assume it is the provider package
   origins[is.na(origins)] <- all_pkgs[is.na(origins)]
   names(origins) <- keys
   list2env(as.list(origins), parent = emptyenv(), hash = TRUE)
+}
+
+#' Get standard library functions to ignore during scanning
+#'
+#' Returns a character vector of base R function names that are
+#' commonly used and typically not cited.
+#'
+#' @return Character vector of function names.
+#' @export
+stdlib_funs <- function() {
+  .stdlib_funs
+}
+
+#' Get directories to skip when scanning for R files
+#'
+#' Returns a character vector of directory names that should be
+#' skipped during recursive directory scanning.
+#'
+#' @return Character vector of directory names.
+#' @export
+scan_skip_dirs <- function() {
+  .scan_skip_dirs
 }

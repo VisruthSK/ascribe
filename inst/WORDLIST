@@ -1,5 +1,6 @@
 AST
 CMD
+CLI
 Codecov
 Kandali
 ORCID
@@ -7,7 +8,10 @@ Rmd
 Srimath
 bibentry
 getters
+invariants
 knitr
+metapackage
+metapackages
 namespaced
 precompiles
 qmd

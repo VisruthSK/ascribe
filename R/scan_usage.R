@@ -8,10 +8,10 @@
 #' package is included in `allowed_packages`. The scanner attributes an
 #' unqualified function only when `library()` or `require()` attached a package
 #' earlier in the same file and the supplied indexes can resolve the call.
-#' `metapackages` can add packages to that attachment set. If several attached
-#' packages export the function, the most recently attached match wins. The
-#' scanner attributes known re-exports to their origin package and otherwise to
-#' the resolved package.
+#' The universe's metapackages can add packages to that attachment set. If
+#' several attached packages export the function, the most recently attached
+#' match wins. The scanner attributes known re-exports to their origin package
+#' and otherwise to the resolved package.
 #'
 #' @param path A single project directory (searched recursively) or a vector of
 #'   files (.R/.Rmd/.qmd).
@@ -25,13 +25,13 @@
 #'   origin cannot be determined exactly. If `TRUE`, abort on ambiguous calls.
 #' @param skip_dirs Character vector of directory names to skip when scanning a
 #'   directory. Defaults to `scan_skip_dirs()`.
-#' @param metapackages Named list mapping attached package names to additional
-#'   packages that should be treated as co-attached for unqualified resolution.
-#'   Defaults to `NULL`.
 #' @param use_knitr Logical. If `TRUE`, parse `.Rmd` and `.qmd` files with
 #'   `knitr::purl()`, which resolves knitr features the in-house parser ignores,
 #'   such as `child` documents. It also comments out `eval=FALSE` and
 #'   `purl=FALSE` chunks, so usage in them goes unrecorded. Defaults to `FALSE`.
+#' @param progress Logical. If `TRUE` (default in interactive sessions), display
+#'   informational CLI progress. Does not affect warnings, errors, or ambiguity
+#'   handling. Defaults to `interactive()`.
 #' @return A list of packages, resolved functions, and ambiguous function calls.
 #' @export
 #' @examples
@@ -55,16 +55,149 @@ scan_usage <- function(
   ignore_unqualified_functions = .stdlib_funs,
   strict = FALSE,
   skip_dirs = .scan_skip_dirs,
-  metapackages = NULL,
-  use_knitr = FALSE
+  use_knitr = FALSE,
+  progress = interactive()
+) {
+  ctx <- .scan_prepare(universe, ignore_unqualified_functions)
+
+  paths <- normalizePath(path, winslash = "/", mustWork = TRUE)
+  dir_flags <- dir.exists(paths)
+
+  if (length(paths) == 1L && dir_flags) {
+    dir_path <- paths[[1L]]
+    if (progress) {
+      cli::cli_alert_info("Searching directory {.path {dir_path}}")
+    }
+    files <- .scan_dir_files(dir_path, skip_dirs)
+  } else {
+    if (any(dir_flags)) {
+      cli::cli_abort(c(
+        "{.arg path} must be a single directory or a vector of files.",
+        "x" = "Mixed directories and files or multiple directories are not supported."
+      ))
+    }
+    if (progress) {
+      lapply(
+        paths,
+        function(file_path) cli::cli_alert_info("Searching {.path {file_path}}")
+      )
+    }
+    files <- paths
+  }
+
+  if (!length(files)) {
+    cli::cli_abort(c(
+      "No files found.",
+      "i" = "Check the {.arg path} and {.arg skip_dirs} arguments."
+    ))
+  }
+
+  hits <- lapply(
+    unique(files),
+    function(file) {
+      code_str <- .extract_code(
+        file,
+        skip_patterns = ctx$skip_patterns,
+        use_knitr = use_knitr
+      )
+      is_r <- grepl("\\.r$", file, ignore.case = TRUE)
+      .scan_tokens(
+        code_str,
+        allowed_packages = ctx$allowed_packages,
+        resolver_index = ctx$resolver_index,
+        metapackages = ctx$metapackages,
+        walker = ctx$walker,
+        file_path = file,
+        skip_patterns = if (is_r) NULL else ctx$skip_patterns,
+        explicit_only = ctx$explicit_only
+      )
+    }
+  )
+
+  .scan_finish(
+    hits,
+    strict,
+    universe$package_citations,
+    universe$function_citations
+  )
+}
+
+#' Scan in-memory R code for package and function usage
+#'
+#' Scans a character vector of R source code and returns the same
+#' result structure as [scan_usage()]. Reuses the same internal parser
+#' and walker as file-based scanning.
+#'
+#' @param code Character vector of R source code.
+#' @param universe A universe returned by [build_universe_data()].
+#' @param ignore_unqualified_functions Character vector of function names to
+#'   ignore when attributing unqualified calls. Defaults to [stdlib_funs()].
+#' @param strict If `FALSE` (default), warn on ambiguous function calls. If
+#'   `TRUE`, abort on ambiguous calls.
+#' @return A list of packages, resolved functions, and ambiguous function calls
+#'   (same structure as `scan_usage()`).
+#' @export
+#' @examples
+#' universe <- build_universe_data(c("stats", "utils"))
+#' code <- c(
+#'   "library(stats)",
+#'   "requireNamespace(\"utils\")",
+#'   "filter(1:10, rep(1, 3))",
+#'   "utils::head(letters)"
+#' )
+#' scan_code(code, universe, ignore_unqualified_functions = character())
+scan_code <- function(
+  code,
+  universe,
+  ignore_unqualified_functions = .stdlib_funs,
+  strict = FALSE
+) {
+  ctx <- .scan_prepare(universe, ignore_unqualified_functions)
+
+  code_str <- paste(code, collapse = "\n")
+  if (!.any_pattern_matches(ctx$skip_patterns, code_str)) {
+    return(structure(
+      list(
+        packages = character(),
+        functions = character(),
+        ambiguous = character(),
+        package_citations = universe$package_citations,
+        function_citations = universe$function_citations
+      ),
+      class = "scan_usage"
+    ))
+  }
+
+  hits <- .scan_tokens(
+    code_str,
+    allowed_packages = ctx$allowed_packages,
+    resolver_index = ctx$resolver_index,
+    metapackages = ctx$metapackages,
+    walker = ctx$walker,
+    file_path = "<code>",
+    skip_patterns = NULL,
+    explicit_only = ctx$explicit_only
+  )
+
+  .scan_finish(
+    list(hits),
+    strict,
+    universe$package_citations,
+    universe$function_citations
+  )
+}
+
+# Shared preparation: validate universe, resolve metapackages, build walker
+# and skip patterns. Returns a context list used by both scan_usage and scan_code.
+.scan_prepare <- function(
+  universe,
+  ignore_unqualified_functions
 ) {
   allowed_packages <- universe$packages
-  export_index <- universe$export_index
-  origin_map <- universe$origin_map
+  resolver_index <- universe$resolver_index
+  metapackages <- universe$metapackages
 
-  resolver_index <- .scan_resolver_index(export_index, origin_map)
-  metapackages <- .normalize_metapackages(metapackages, allowed_packages)
-  export_names <- names(export_index)
+  export_names <- names(universe$export_index)
   if (is.null(export_names)) {
     export_names <- character()
   }
@@ -77,65 +210,31 @@ scan_usage <- function(
     metapackages = metapackages
   )
 
-  paths <- normalizePath(path, winslash = "/", mustWork = TRUE)
-  dir_flags <- dir.exists(paths)
-
-  files <- if (length(paths) == 1L && dir_flags) {
-    dir_path <- paths[[1L]]
-    cli::cli_alert_info("Searching directory {.path {dir_path}}")
-    .scan_dir_files(dir_path, skip_dirs)
-  } else {
-    if (any(dir_flags)) {
-      cli::cli_abort(c(
-        "{.arg path} must be a single directory or a vector of files.",
-        "x" = "Mixed directories and files or multiple directories are not supported."
-      ))
-    }
-    lapply(
-      paths,
-      function(file_path) cli::cli_alert_info("Searching {.path {file_path}}")
-    )
-    paths
-  }
-
-  if (!length(files)) {
-    cli::cli_abort(c(
-      "No files found.",
-      "i" = "Check the {.arg path} and {.arg skip_dirs} arguments."
-    ))
-  }
-
-  # Built once here (not per file) and reused by both .extract_code (on the
-  # raw file text) and .scan_tokens (on the post-extraction code), so files
-  # are never rescanned for the same package names with two different
-  # mechanisms.
   skip_patterns <- .build_skip_patterns(c(
     allowed_packages,
     names(metapackages)
   ))
 
-  hits <- lapply(
-    unique(files),
-    function(file) {
-      code_str <- .extract_code(
-        file,
-        skip_patterns = skip_patterns,
-        use_knitr = use_knitr
-      )
-      is_r <- grepl("\\.r$", file, ignore.case = TRUE)
-      .scan_tokens(
-        code_str,
-        allowed_packages = allowed_packages,
-        resolver_index = resolver_index,
-        metapackages = metapackages,
-        walker = walker,
-        file_path = file,
-        skip_patterns = if (is_r) NULL else skip_patterns,
-        explicit_only = !is.null(metapackages) && length(metapackages) > 0L
-      )
-    }
-  )
+  explicit_only <- length(metapackages) > 0L &&
+    length(ls(metapackages, all.names = TRUE)) > 0L
 
+  list(
+    allowed_packages = allowed_packages,
+    resolver_index = resolver_index,
+    metapackages = metapackages,
+    walker = walker,
+    skip_patterns = skip_patterns,
+    explicit_only = explicit_only
+  )
+}
+
+# Shared finish: collect ambiguous, warn/abort, assemble result.
+.scan_finish <- function(
+  hits,
+  strict,
+  package_citations,
+  function_citations
+) {
   ambiguous <- .collect_unique(hits, "ambiguous")
   if (length(ambiguous)) {
     msg <- c(
@@ -146,7 +245,6 @@ scan_usage <- function(
       ),
       "i" = "Please namespace them ({.code pkg::function()}) and rerun or set {.code strict = FALSE}."
     )
-
     if (strict) cli::cli_abort(msg) else cli::cli_warn(msg)
   }
 
@@ -154,7 +252,9 @@ scan_usage <- function(
     list(
       packages = .collect_unique(hits, "pkgs"),
       functions = .collect_unique(hits, "keys"),
-      ambiguous = ambiguous
+      ambiguous = ambiguous,
+      package_citations = package_citations,
+      function_citations = function_citations
     ),
     class = "scan_usage"
   )
@@ -163,9 +263,6 @@ scan_usage <- function(
 .scan_dir_files <- function(dir_path, skip_dirs) {
   dir_path <- normalizePath(dir_path, winslash = "/", mustWork = TRUE)
 
-  # BFS queue as an index cursor over plain vectors grown by out-of-bounds
-  # indexed assignment (`x[i] <- v`). R (>= 3.4.0) overallocates on such
-  # extension, so appends are amortized O(1); `c(x, v)` always copies.
   dirs_to_visit <- dir_path
   n_dirs <- 1L
   matching_files <- character()
@@ -255,19 +352,6 @@ scan_usage <- function(
   FALSE
 }
 
-.normalize_metapackages <- function(metapackages, allowed_packages) {
-  if (is.null(metapackages)) {
-    return(NULL)
-  }
-
-  lapply(
-    metapackages,
-    function(pkgs) {
-      unique(pkgs[!is.na(fastmatch::fmatch(pkgs, allowed_packages))])
-    }
-  )
-}
-
 .read_file_lf <- function(file) {
   raw <- brio::read_file(file)
   if (!length(raw)) "" else gsub("\r\n", "\n", raw, fixed = TRUE)
@@ -333,7 +417,6 @@ scan_usage <- function(
   if (!length(fence_rows)) {
     return("")
   }
-
   fence_lines <- lines[fence_rows]
   caps <- regmatches(
     fence_lines,
@@ -343,7 +426,6 @@ scan_usage <- function(
       perl = TRUE
     )
   )
-
   chunks <- vector("list", length(fence_rows))
   j <- 0L
   k <- 1L
@@ -355,7 +437,6 @@ scan_usage <- function(
       k <- k + 1L
       next
     }
-
     fence <- cap[[2L]]
     fence_char <- substr(fence, 1L, 1L)
     escaped_char <- if (fence_char == "`") "\\`" else "~"
@@ -584,7 +665,7 @@ scan_usage <- function(
         head_name <- as.character(head)
         kind <- head_kind_env[[head_name]]
         if (is.null(kind) || kind == 1L) {
-          # Not in the export index, or a language keyword/operator/subset.
+          # skip: not in export index, or a language keyword/operator
         } else if (kind == 6L) {
           acc$unqual_funs <- c(acc$unqual_funs, head_name)
           acc$unqual_visit_idx <- c(acc$unqual_visit_idx, acc$visit_idx)
@@ -613,7 +694,7 @@ scan_usage <- function(
               acc$lib_pkgs <- c(acc$lib_pkgs, pkg)
               acc$lib_visit_idx <- c(acc$lib_visit_idx, acc$visit_idx)
               acc$lib_is_attach <- c(acc$lib_is_attach, is_attach)
-              acc$lib_is_explicit <- c(acc$lib_is_explicit, is_attach)
+              acc$lib_is_explicit <- c(acc$lib_is_explicit, TRUE)
             }
 
             if (is_attach && !is.null(metapackages)) {
@@ -844,7 +925,6 @@ scan_usage <- function(
     get0(key, envir = origin_map, inherits = FALSE, ifnotfound = NULL)
   }
 
-  # Single provider functions (>95% of cases)
   single_idx <- which(lens == 1L)
   if (length(single_idx) > 0L) {
     s_funs <- funs[single_idx]
@@ -867,7 +947,6 @@ scan_usage <- function(
     }
   }
 
-  # Multi-provider functions
   other_idx <- which(lens > 1L)
   if (length(other_idx) > 0L) {
     for (i in other_idx) {
@@ -1004,66 +1083,29 @@ scan_usage <- function(
       next
     }
 
-    considered[idx] <- TRUE
-    resolved_pkgs[idx] <- .resolve_calls(
+    calls <- .resolve_calls(
       meta = meta,
       attached = attached,
       attached_rows = attached_rows,
       visit_idx = unqual$idx[idx],
       allowed_packages = allowed_packages
     )
-  }
-  if (!any(considered)) {
-    return(empty)
+
+    has_resolution <- nzchar(calls)
+    resolved_pkgs[idx[has_resolution]] <- calls[has_resolution]
+    considered[idx] <- has_resolution
   }
 
-  resolved <- nzchar(resolved_pkgs)
-  list(
-    pkgs = resolved_pkgs[resolved],
-    keys = if (any(resolved)) {
-      paste0(resolved_pkgs[resolved], "::", unqual$funs[resolved])
-    } else {
-      character()
-    },
-    ambiguous = if (all(!considered | resolved)) {
-      character()
-    } else {
-      sort(unique(unqual$funs[considered & !resolved]))
-    }
+  ambiguous <- unqual$funs[!considered]
+  resolved_keys <- paste0(
+    resolved_pkgs[considered],
+    "::",
+    unqual$funs[considered]
   )
-}
 
-#' Ignored functions/directories used by scanner
-#'
-#' @name internal_data
-#' @rdname internal_data
-#' @keywords internal
-NULL
-
-#' Default ignored functions
-#'
-#' Vector of functions to be ignored when parsing.
-#' Generated in `data-raw/sysdata.R` from exports of base R packages.
-#'
-#' @rdname internal_data
-#' @return A character vector of function names to ignore.
-#' @export
-#' @examples
-#' head(stdlib_funs())
-stdlib_funs <- function() {
-  .stdlib_funs
-}
-
-#' Default skip directories
-#'
-#' Vector of directories skipped when recursively searching
-#' a project. Generated in `data-raw/sysdata.R`.
-#'
-#' @rdname internal_data
-#' @return A character vector of directory names to skip.
-#' @export
-#' @examples
-#' scan_skip_dirs()
-scan_skip_dirs <- function() {
-  .scan_skip_dirs
+  list(
+    pkgs = unique(resolved_pkgs[considered]),
+    keys = resolved_keys,
+    ambiguous = ambiguous
+  )
 }

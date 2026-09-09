@@ -4,10 +4,25 @@
 \alias{build_universe_data}
 \title{Build scanner data for a package universe}
 \usage{
-build_universe_data(packages)
+build_universe_data(
+  packages,
+  metapackages = NULL,
+  package_citations = NULL,
+  function_citations = NULL
+)
 }
 \arguments{
 \item{packages}{Character vector of package names.}
+
+\item{metapackages}{Named list or environment mapping metapackage names to
+character vectors of member packages. Every member must exist in \code{packages}.
+Defaults to \code{NULL}.}
+
+\item{package_citations}{Named list or environment mapping package names to
+citation entries (bibentry objects). Defaults to empty.}
+
+\item{function_citations}{Named list or environment mapping \code{"pkg::fun"} keys
+to citation entries. Defaults to empty.}
 }
 \value{
 An \code{ascribe_universe} object with components:
@@ -19,8 +34,12 @@ vectors of exported function names (from \code{\link[=collect_pkg_funs]{collect_
 character vectors of packages (from \code{\link[=build_export_index]{build_export_index()}}).}
 \item{origin_map}{Environment mapping \code{"pkg::fun"} keys
 to origin packages (from \code{\link[=build_origin_map]{build_origin_map()}}).}
-\item{pkg_versions}{Named list mapping package names to version
+\item{pkg_versions}{Named character vector mapping package names to version
 strings.}
+\item{metapackages}{Environment mapping metapackage names to member packages.}
+\item{package_citations}{Environment mapping package names to citation entries.}
+\item{function_citations}{Environment mapping \code{"pkg::fun"} keys to citation entries.}
+\item{resolver_index}{Precomputed resolver index for function resolution.}
 }
 }
 \description{

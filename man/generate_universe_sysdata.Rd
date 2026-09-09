@@ -9,7 +9,10 @@ generate_universe_sysdata(
   prefix,
   extra_vars = list(),
   include_scanner_defaults = FALSE,
-  file
+  file,
+  metapackages = NULL,
+  package_citations = NULL,
+  function_citations = NULL
 )
 }
 \arguments{
@@ -25,6 +28,15 @@ the saved file (e.g., citation environments).}
 and \code{.scan_skip_dirs}. Defaults to \code{FALSE}.}
 
 \item{file}{Output path (required).}
+
+\item{metapackages}{Named list or environment mapping metapackage names to
+member packages. Defaults to \code{NULL}.}
+
+\item{package_citations}{Named list or environment of package citation entries.
+Defaults to empty.}
+
+\item{function_citations}{Named list or environment of function citation entries.
+Defaults to empty.}
 }
 \value{
 Invisibly returns the result of \code{\link[=build_universe_data]{build_universe_data()}}.
@@ -36,13 +48,9 @@ intended for use in a downstream package's \code{data-raw/sysdata.R}
 script.
 }
 \details{
-The generated variables are:
+The generated variable is:
 \describe{
-\item{\verb{.\{prefix\}_pkgs}}{Character vector of package names.}
-\item{\verb{.\{prefix\}_exports}}{Named list of exported functions per package.}
-\item{\verb{.\{prefix\}_export_index}}{Inverted index: function name to packages.}
-\item{\verb{.\{prefix\}_origin_map}}{Environment: \code{"pkg::fun"} keys to origin.}
-\item{\verb{.\{prefix\}_pkg_versions}}{Named list of version strings.}
+\item{\verb{.\{prefix\}_universe}}{Complete \code{ascribe_universe} object.}
 }
 
 When \code{include_scanner_defaults} is \code{TRUE}, \code{.stdlib_funs} and
