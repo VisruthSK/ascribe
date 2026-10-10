@@ -1,0 +1,7 @@
+Package: ascribetestdownstreamr6
+Version: 0.0.1
+Title: Test Fixture for Ascribe R6 Re-export Handling
+Description: Minimal downstream package for testing R6 re-export detection.
+Authors@R: person("Ascribe", "Tests", email = "tests@ascribe.test", role = c("aut", "cre"))
+License: MIT
+Imports: ascribetestupstreamr6

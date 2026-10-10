@@ -1,0 +1,7 @@
+Package: ascribetestupstreamr6
+Version: 0.0.1
+Title: Test Fixture for Ascribe R6 Discovery
+Description: Minimal package with exported and internal R6 classes for testing collect_r6_methods.
+Authors@R: person("Ascribe", "Tests", email = "tests@ascribe.test", role = c("aut", "cre"))
+License: MIT
+Imports: R6

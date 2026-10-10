@@ -5,13 +5,13 @@
 # - .scan_skip_dirs: directory names to skip when scanning projects
 
 # Precompute standard library functions
-.stdlib_funs <- lapply(
-  c("base", "stats", "utils", "graphics", "grDevices", "methods"),
-  getNamespaceExports
-) |>
-  unlist(use.names = FALSE) |>
-  unique() |>
-  sort()
+.stdlib_funs <- sort(unique(unlist(
+  lapply(
+    c("base", "stats", "utils", "graphics", "grDevices", "methods"),
+    getNamespaceExports
+  ),
+  use.names = FALSE
+)))
 
 # Default skip directories
 .scan_skip_dirs <- c(

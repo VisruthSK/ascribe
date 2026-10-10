@@ -10,8 +10,8 @@ scan_usage(
   ignore_unqualified_functions = .stdlib_funs,
   strict = FALSE,
   skip_dirs = .scan_skip_dirs,
-  metapackages = NULL,
-  use_knitr = FALSE
+  use_knitr = FALSE,
+  progress = interactive()
 )
 }
 \arguments{
@@ -32,14 +32,14 @@ origin cannot be determined exactly. If \code{TRUE}, abort on ambiguous calls.}
 \item{skip_dirs}{Character vector of directory names to skip when scanning a
 directory. Defaults to \code{scan_skip_dirs()}.}
 
-\item{metapackages}{Named list mapping attached package names to additional
-packages that should be treated as co-attached for unqualified resolution.
-Defaults to \code{NULL}.}
-
 \item{use_knitr}{Logical. If \code{TRUE}, parse \code{.Rmd} and \code{.qmd} files with
 \code{knitr::purl()}, which resolves knitr features the in-house parser ignores,
 such as \code{child} documents. It also comments out \code{eval=FALSE} and
 \code{purl=FALSE} chunks, so usage in them goes unrecorded. Defaults to \code{FALSE}.}
+
+\item{progress}{Logical. If \code{TRUE} (default in interactive sessions), display
+informational CLI progress. Does not affect warnings, errors, or ambiguity
+handling. Defaults to \code{interactive()}.}
 }
 \value{
 A list of packages, resolved functions, and ambiguous function calls.
@@ -54,10 +54,10 @@ Explicit package references from \code{library()}, \code{require()},
 package is included in \code{allowed_packages}. The scanner attributes an
 unqualified function only when \code{library()} or \code{require()} attached a package
 earlier in the same file and the supplied indexes can resolve the call.
-\code{metapackages} can add packages to that attachment set. If several attached
-packages export the function, the most recently attached match wins. The
-scanner attributes known re-exports to their origin package and otherwise to
-the resolved package.
+The universe's metapackages can add packages to that attachment set. If
+several attached packages export the function, the most recently attached
+match wins. The scanner attributes known re-exports to their origin package
+and otherwise to the resolved package.
 }
 \examples{
 path <- tempfile(fileext = ".R")

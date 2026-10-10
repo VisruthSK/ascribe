@@ -13,15 +13,15 @@ library(ascribe)
 
 For a complete, real-world implementation of a package citation scanner built with `ascribe`, see [stanflow](https://github.com/VisruthSK/stanflow).
 
-`ascribe` separates AST parsing from citation generation. This guide demonstrates building a citation scanner targeting Stan packages (`cmdstanr`, `posterior`, `bayesplot`, `rstan`).
+`ascribe` separates AST parsing from citation generation. This guide demonstrates building a citation scanner targeting base R packages (`stats`, `graphics`, `utils`, `methods`).
 
 ## Build the package universe
 
 `build_universe_data()` extracts exported functions, R6 methods, and origin mappings for re-exported functions.
 
 ```{r}
-stan_pkgs <- c("cmdstanr", "posterior", "bayesplot", "rstan")
-universe <- build_universe_data(stan_pkgs)
+base_pkgs <- c("stats", "graphics", "utils", "methods")
+universe <- build_universe_data(base_pkgs)
 names(universe)
 ```
 
@@ -32,18 +32,18 @@ Run `build_universe_data()` in an environment where all target packages are inst
 `scan_usage()` inspects `.R`, `.Rmd`, and `.qmd` files for package attachments (`library()`, `require()`) and function calls (`pkg::fun()` or unqualified calls resolved by attachment order).
 
 ```{r}
-project <- tempfile("stan-project-")
+project <- tempfile("base-project-")
 dir.create(project)
 script <- file.path(project, "analysis.R")
 
 writeLines(
   c(
-    "library(cmdstanr)",
-    "library(posterior)",
-    "fit <- cmdstan_model('model.stan')$sample()",
-    "draws <- fit$draws()",
-    "summarise_draws(draws)",
-    "bayesplot::mcmc_hist(draws)"
+    "library(stats)",
+    "library(graphics)",
+    "fit <- lm(mpg ~ wt, data = mtcars)",
+    "summary(fit)",
+    "plot(fit)",
+    "utils::capture.output(summary(fit))"
   ),
   script
 )
@@ -69,7 +69,7 @@ citations <- cite_usage(usage)
 writeLines(citations)
 ```
 
-Override default package or function citations with `package_citations` and `function_citations`. For the real `Stan` citations, see the `data-raw` directory in [`stanflow`](https://github.com/VisruthSK/stanflow/tree/main/data-raw).
+Override default package or function citations with `package_citations` and `function_citations`.
 
 ## Save scanner data in sysdata.rda
 
@@ -79,10 +79,10 @@ Override default package or function citations with `package_citations` and `fun
 #| eval: false
 # data-raw/sysdata.R
 generate_universe_sysdata(
-  packages = c("cmdstanr", "posterior", "bayesplot", "rstan"),
-  prefix = "stan",
+  packages = c("stats", "graphics", "utils", "methods"),
+  prefix = "base",
   file = "R/sysdata.rda"
 )
 ```
 
-This saves `.stan_pkgs`, `.stan_exports`, `.stan_export_index`, `.stan_origin_map`, and `.stan_pkg_versions` for fast loading without runtime package inspection.
+This saves `.base_pkgs`, `.base_exports`, `.base_export_index`, `.base_origin_map`, and `.base_pkg_versions` for fast loading without runtime package inspection.
