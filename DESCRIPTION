@@ -22,7 +22,6 @@ Imports:
 Suggests: 
     knitr,
     quarto,
-    spelling,
     testthat (>= 3.0.0)
 VignetteBuilder: 
     quarto

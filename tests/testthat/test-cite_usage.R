@@ -55,6 +55,43 @@ test_that("cite_usage builds citations from a package universe", {
   expect_type(bibtex, "character")
 })
 
+test_that("cite_usage inherits citation mappings from scan results", {
+  package_entry <- utils::bibentry(
+    bibtype = "Manual",
+    key = "stats-package",
+    title = "Stats package",
+    author = "A",
+    year = "2026"
+  )
+  function_entry <- utils::bibentry(
+    bibtype = "Manual",
+    key = "stats-median",
+    title = "Median",
+    author = "B",
+    year = "2026"
+  )
+  universe <- build_universe_data(
+    "stats",
+    package_citations = list(stats = package_entry),
+    function_citations = list("stats::median" = function_entry)
+  )
+  usage <- scan_code("stats::median(1:3)", universe)
+
+  citations <- cite_usage(
+    usage,
+    package_citation = function(...) fail("Unexpected package citation lookup"),
+    cite_r = FALSE,
+    format = "bibentry"
+  )
+
+  expect_true(any(grepl(
+    "Stats package",
+    utils::toBibtex(citations),
+    fixed = TRUE
+  )))
+  expect_true(any(grepl("Median", utils::toBibtex(citations), fixed = TRUE)))
+})
+
 test_that("cite_usage can return BibTeX and report no citations", {
   path <- tempfile(fileext = ".R")
   on.exit(unlink(path), add = TRUE)
